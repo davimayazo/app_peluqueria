@@ -147,7 +147,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                     service=service,
                     start_datetime=start_datetime,
                     end_datetime=end_datetime,
-                    status='confirmada',
+                    status='pendiente',
                     price_at_booking=service.price
                 )
                 

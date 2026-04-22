@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO, isSameDay, addMinutes } from 'date-fns';
+import { format, parseISO, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -11,14 +11,15 @@ import {
   fetchServices, 
   fetchBarbers, 
   fetchUsers, 
-  createAppointment 
+  createAppointment,
+  completeAppointment
 } from '@/lib/api';
 import { Appointment, Service, Barber, User } from '@/types';
 
 export default function AdminAgenda() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  const [filterStatus, setFilterStatus] = useState<string>('todos');
+  const [filterStatus, setFilterStatus] = useState<string>('pendiente');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +58,14 @@ export default function AdminAgenda() {
       });
     },
     onError: (err: any) => setError(err.message)
+  });
+
+  const completeMutation = useMutation({
+    mutationFn: (id: number) => completeAppointment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin_appointments'] });
+    },
+    onError: (err: any) => alert(err.message)
   });
 
   const filteredAppointments = appointments?.filter((appt: Appointment) => {
@@ -115,9 +124,9 @@ export default function AdminAgenda() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="bg-surfaceLayer border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
+                <option value="pendiente">Por Realizar (Pendientes)</option>
                 <option value="todos">Todos los estados</option>
                 <option value="confirmada">Confirmadas</option>
-                <option value="pendiente">Pendientes</option>
                 <option value="completada">Completadas</option>
                 <option value="cancelada">Canceladas</option>
               </select>
@@ -143,10 +152,10 @@ export default function AdminAgenda() {
                   {filteredAppointments.length > 0 ? (
                     <div className="space-y-4">
                       {filteredAppointments.sort((a, b) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
-                        <div key={appt.id} className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-surface rounded-xl border border-border/50 hover:border-primary/30 transition-all group">
+                        <div key={appt.id} className={`flex flex-col md:flex-row md:items-center justify-between p-5 bg-surface rounded-xl border transition-all group ${appt.status === 'pendiente' ? 'border-primary/30' : 'border-border/50'}`}>
                           <div className="flex gap-6 items-center">
                             <div className="text-center">
-                              <p className="text-2xl font-bold text-primary">
+                              <p className={`text-2xl font-bold ${appt.status === 'pendiente' ? 'text-primary' : 'text-textMuted'}`}>
                                 {format(parseISO(appt.start_datetime), "HH:mm")}
                               </p>
                               <p className="text-[10px] text-textMuted uppercase tracking-wider">Inicio</p>
@@ -172,7 +181,16 @@ export default function AdminAgenda() {
                               <p className="text-[10px] text-textMuted uppercase tracking-wider">Precio</p>
                             </div>
                             
-                            <div className="flex flex-col items-end gap-2">
+                            <div className="flex items-center gap-3">
+                              {appt.status === 'pendiente' && (
+                                <button 
+                                  onClick={() => completeMutation.mutate(appt.id)}
+                                  disabled={completeMutation.isPending}
+                                  className="px-4 py-2 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-500 transition-colors shadow-lg shadow-green-900/20"
+                                >
+                                  {completeMutation.isPending ? '...' : 'Completar'}
+                                </button>
+                              )}
                               <span className={`px-3 py-1 text-xs font-bold rounded-full capitalize ${
                                 appt.status === 'confirmada' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
                                 appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
@@ -206,37 +224,23 @@ export default function AdminAgenda() {
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
             <div className="bg-surfaceLayer border border-border w-full max-w-md rounded-2xl p-6 shadow-2xl animate-in zoom-in duration-200">
               <h2 className="text-2xl font-bold text-white mb-6">Nueva Cita (Admin)</h2>
-              
-              {error && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-xs">
-                  {error}
-                </div>
-              )}
-
+              {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-xs">{error}</div>}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-textMuted mb-1">Cliente</label>
-                  <select
-                    required
-                    value={formData.client_id}
-                    onChange={(e) => setFormData({...formData, client_id: e.target.value})}
-                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  >
+                  <select required value={formData.client_id} onChange={(e) => setFormData({...formData, client_id: e.target.value})}
+                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50">
                     <option value="">Selecciona un cliente</option>
                     {clients.map((c: User) => (
                       <option key={c.id} value={c.id}>{c.full_name || c.username} ({c.email})</option>
                     ))}
                   </select>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Barbero</label>
-                    <select
-                      value={formData.barber_id}
-                      onChange={(e) => setFormData({...formData, barber_id: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
+                    <select value={formData.barber_id} onChange={(e) => setFormData({...formData, barber_id: e.target.value})}
+                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50">
                       <option value="">Seleccionar</option>
                       <option value="sin_preferencia" className="text-primary font-bold">✨ Sin preferencia (Auto)</option>
                       {barbers?.map((b: Barber) => (
@@ -246,12 +250,8 @@ export default function AdminAgenda() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Servicio</label>
-                    <select
-                      required
-                      value={formData.service_id}
-                      onChange={(e) => setFormData({...formData, service_id: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    >
+                    <select required value={formData.service_id} onChange={(e) => setFormData({...formData, service_id: e.target.value})}
+                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50">
                       <option value="">Seleccionar</option>
                       {services?.map((s: Service) => (
                         <option key={s.id} value={s.id}>{s.name} ({s.price}€)</option>
@@ -259,44 +259,21 @@ export default function AdminAgenda() {
                     </select>
                   </div>
                 </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Fecha</label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.date}
-                      onChange={(e) => setFormData({...formData, date: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})}
+                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Hora</label>
-                    <input
-                      type="time"
-                      required
-                      step="900" // 15 min steps
-                      value={formData.time}
-                      onChange={(e) => setFormData({...formData, time: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <input type="time" required step="900" value={formData.time} onChange={(e) => setFormData({...formData, time: e.target.value})}
+                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                 </div>
-
                 <div className="flex gap-3 mt-8">
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1 px-4 py-2 bg-surface border border-border text-white rounded-lg hover:bg-surface/80 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2 bg-surface border border-border text-white rounded-lg hover:bg-surface/80 transition-colors">Cancelar</button>
+                  <button type="submit" disabled={createMutation.isPending} className="flex-1 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
                     {createMutation.isPending ? 'Creando...' : 'Confirmar Cita'}
                   </button>
                 </div>

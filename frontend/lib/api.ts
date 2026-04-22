@@ -167,12 +167,20 @@ export const fetchBarbers = async () => {
   return data.results || data;
 };
 
-export const createBarber = async (barberData: any) => {
-  const res = await apiFetch('/barbers/', {
+export const createAppointment = async (apptData: any) => {
+  const res = await apiFetch('/appointments/', {
     method: 'POST',
-    body: JSON.stringify(barberData),
+    body: JSON.stringify(apptData),
   });
-  if (!res.ok) throw new Error('Error al crear el barbero');
+  if (!res.ok) throw new Error('Error al crear la reserva');
+  return res.json();
+};
+
+export const completeAppointment = async (id: number) => {
+  const res = await apiFetch(`/appointments/${id}/complete/`, {
+    method: 'PATCH',
+  });
+  if (!res.ok) throw new Error('Error al completar la cita');
   return res.json();
 };
 
@@ -198,18 +206,6 @@ export const fetchAppointments = async () => {
   if (!res.ok) throw new Error('Failed to fetch appointments');
   const data = await res.json();
   return data.results || data;
-};
-
-export const createAppointment = async (appointmentData: { service_id: number; barber_id: number; start_datetime: string }) => {
-  const res = await apiFetch('/appointments/', {
-    method: 'POST',
-    body: JSON.stringify(appointmentData),
-  });
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.error || 'Error al crear la cita');
-  }
-  return res.json();
 };
 
 export const loginUser = async (credentials: LoginCredentials) => {
