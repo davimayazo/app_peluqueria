@@ -1,0 +1,52 @@
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Base de datos local
+*.sqlite3
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+
+# ============================================
+# Node.js / Next.js
+# ============================================
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ============================================
+# IDEs y editores
+# ============================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================
+# Misceláneos
+# ============================================
+*.log
+.agents/
