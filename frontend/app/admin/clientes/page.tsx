@@ -1,17 +1,21 @@
 "use client";
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { fetchUsers, registerUser, updateUser, deleteUser } from '@/lib/api';
-import { User } from '@/types';
+import { fetchUsers, registerUser, updateUser, deleteUser, fetchAppointments } from '@/lib/api';
+import { User, Appointment } from '@/types';
 
 export default function AdminClientes() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [historyClient, setHistoryClient] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
@@ -23,9 +27,15 @@ export default function AdminClientes() {
     phone: ''
   });
 
+  // Queries
   const { data: users, isLoading } = useQuery({ 
     queryKey: ['admin_users'], 
     queryFn: fetchUsers 
+  });
+
+  const { data: allAppointments } = useQuery({
+    queryKey: ['admin_all_appointments'],
+    queryFn: fetchAppointments
   });
 
   const createMutation = useMutation({
@@ -65,6 +75,9 @@ export default function AdminClientes() {
     return isClient && matchesSearch;
   }) || [];
 
+  const clientHistory = allAppointments?.filter((appt: Appointment) => appt.client === historyClient?.id)
+    .sort((a: Appointment, b: Appointment) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime()) || [];
+
   const openModal = (user: User | null = null) => {
     setError(null);
     if (user) {
@@ -72,7 +85,7 @@ export default function AdminClientes() {
       setFormData({
         username: user.username,
         email: user.email,
-        password: '', // No editamos password aquí por simplicidad
+        password: '',
         first_name: user.first_name,
         last_name: user.last_name,
         phone: user.profile?.phone || ''
@@ -94,6 +107,11 @@ export default function AdminClientes() {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedUser(null);
+  };
+
+  const openHistoryModal = (client: User) => {
+    setHistoryClient(client);
+    setIsHistoryModalOpen(true);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -164,7 +182,6 @@ export default function AdminClientes() {
                           <th className="p-4 font-medium uppercase tracking-wider">Nombre Completo</th>
                           <th className="p-4 font-medium uppercase tracking-wider">Usuario</th>
                           <th className="p-4 font-medium uppercase tracking-wider">Email</th>
-                          <th className="p-4 font-medium uppercase tracking-wider">Teléfono</th>
                           <th className="p-4 font-medium uppercase tracking-wider text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -174,8 +191,14 @@ export default function AdminClientes() {
                             <td className="p-4 font-medium text-white">{user.full_name || `${user.first_name} ${user.last_name}`}</td>
                             <td className="p-4 text-textMuted">{user.username}</td>
                             <td className="p-4 text-textMuted">{user.email}</td>
-                            <td className="p-4 text-primary font-medium">{user.profile?.phone || '-'}</td>
-                            <td className="p-4 text-right space-x-2">
+                            <td className="p-4 text-right flex justify-end gap-2">
+                              <button 
+                                onClick={() => openHistoryModal(user)}
+                                className="p-2 text-primary/70 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                title="Ver Historial"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                              </button>
                               <button 
                                 onClick={() => openModal(user)}
                                 className="p-2 text-textMuted hover:text-white hover:bg-surface rounded-lg transition-colors"
@@ -206,6 +229,61 @@ export default function AdminClientes() {
           )}
         </main>
 
+        {/* Modal Historial */}
+        {isHistoryModalOpen && historyClient && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md">
+            <div className="bg-surfaceLayer border border-border w-full max-w-2xl rounded-[2rem] p-8 shadow-2xl animate-in zoom-in duration-300 max-h-[80vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-white mb-1">Historial de Citas</h2>
+                  <p className="text-primary font-medium">{historyClient.full_name || historyClient.username}</p>
+                </div>
+                <button onClick={() => setIsHistoryModalOpen(false)} className="p-2 hover:bg-surface rounded-full transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-textMuted"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+
+              {clientHistory.length > 0 ? (
+                <div className="space-y-4">
+                  {clientHistory.map((appt: Appointment) => (
+                    <div key={appt.id} className="p-5 bg-surface border border-border/50 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 group hover:border-primary/30 transition-all">
+                      <div className="flex gap-4 items-center">
+                        <div className="bg-surfaceLayer p-3 rounded-xl text-primary group-hover:bg-primary group-hover:text-black transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-white">{appt.service_name}</p>
+                          <p className="text-sm text-textMuted">
+                            {format(parseISO(appt.start_datetime), "EEEE d 'de' MMMM, HH:mm", { locale: es })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-border/30 pt-3 md:pt-0">
+                        <div className="text-right">
+                          <p className="text-sm text-textMuted">Barbero: <span className="text-white font-medium">{appt.barber_name}</span></p>
+                          <p className="text-primary font-bold">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
+                        </div>
+                        <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-widest ${
+                          appt.status === 'completada' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                          appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                          appt.status === 'cancelada' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                          'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                        }`}>
+                          {appt.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-12 text-center bg-surface rounded-2xl border-2 border-dashed border-border">
+                  <p className="text-textMuted">Este cliente aún no tiene citas en su historial.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Modal Alta/Edición */}
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
@@ -213,96 +291,39 @@ export default function AdminClientes() {
               <h2 className="text-2xl font-bold text-white mb-6">
                 {selectedUser ? 'Editar Cliente' : 'Alta Nuevo Cliente'}
               </h2>
-              
-              {error && (
-                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-xs">
-                  {error}
-                </div>
-              )}
-
+              {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-xs">{error}</div>}
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Nombre</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.first_name}
-                      onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <input type="text" required value={formData.first_name} onChange={(e) => setFormData({...formData, first_name: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Apellidos</label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.last_name}
-                      onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <input type="text" required value={formData.last_name} onChange={(e) => setFormData({...formData, last_name: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-textMuted mb-1">Nombre de Usuario</label>
-                  <input
-                    type="text"
-                    required
-                    disabled={!!selectedUser}
-                    value={formData.username}
-                    onChange={(e) => setFormData({...formData, username: e.target.value})}
-                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
-                  />
+                  <input type="text" required disabled={!!selectedUser} value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-textMuted mb-1">Email</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
+                  <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-textMuted mb-1">Teléfono</label>
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  />
+                  <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
-
                 {!selectedUser && (
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Contraseña</label>
-                    <input
-                      type="password"
-                      required
-                      value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                      className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                    <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                 )}
-
                 <div className="flex gap-3 mt-8">
-                  <button
-                    type="button"
-                    onClick={closeModal}
-                    className="flex-1 px-4 py-2 bg-surface border border-border text-white rounded-lg hover:bg-surface/80 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                    className="flex-1 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
+                  <button type="button" onClick={closeModal} className="flex-1 px-4 py-2 bg-surface border border-border text-white rounded-lg hover:bg-surface/80 transition-colors">Cancelar</button>
+                  <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="flex-1 px-4 py-2 bg-primary text-black font-bold rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50">
                     {selectedUser ? 'Guardar Cambios' : 'Dar de Alta'}
                   </button>
                 </div>
