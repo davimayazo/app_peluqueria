@@ -184,6 +184,15 @@ export const completeAppointment = async (id: number) => {
   return res.json();
 };
 
+export const cancelAppointment = async (id: number, reason: string = '') => {
+  const res = await apiFetch(`/appointments/${id}/cancel/`, {
+    method: 'PATCH',
+    body: JSON.stringify({ reason }),
+  });
+  if (!res.ok) throw new Error('Error al cancelar la cita');
+  return res.json();
+};
+
 export const updateBarber = async (id: number, barberData: any) => {
   const res = await apiFetch(`/barbers/${id}/`, {
     method: 'PATCH',

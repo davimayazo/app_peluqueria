@@ -182,7 +182,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         return Response(AppointmentSerializer(appointment).data)
 
-    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAdminUser])
+    @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
     def complete(self, request, pk=None):
         """RF-20: Marcar cita como completada (solo admin)."""
         # Nota: Idealmente deberíamos usar IsAdmin (custom permission) aquí, 
@@ -191,8 +191,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
              return Response(status=status.HTTP_403_FORBIDDEN)
              
         appointment = self.get_object()
-        if appointment.status != 'confirmada':
-            return Response({"error": "Solo se pueden completar citas confirmadas."}, status=status.HTTP_400_BAD_REQUEST)
+        if appointment.status not in ['confirmada', 'pendiente']:
+            return Response({"error": "Solo se pueden completar citas confirmadas o pendientes."}, status=status.HTTP_400_BAD_REQUEST)
             
         appointment.status = 'completada'
         appointment.save()
