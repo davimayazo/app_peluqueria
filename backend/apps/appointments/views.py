@@ -38,7 +38,13 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         
         try:
             service = Service.objects.get(id=service_id, is_active=True)
-            barber = Barber.objects.get(id=barber_id, is_active=True)
+            
+            if barber_id:
+                barber = Barber.objects.get(id=barber_id, is_active=True)
+                barbers_to_check = [barber]
+            else:
+                # RF-09: Lógica "Sin preferencia"
+                barbers_to_check = Barber.objects.filter(is_active=True)
         except (Service.DoesNotExist, Barber.DoesNotExist):
             return Response(
                 {"error": "Servicio o Barbero inválido/inactivo."},
@@ -48,12 +54,19 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         end_datetime = start_datetime + timedelta(minutes=service.duration_minutes)
         now = timezone.now()
         
-        # Regla: RF-13 (1 hora mínima de antelación)
-        if start_datetime <= now + timedelta(hours=1):
-            return Response(
-                {"error": "La reserva requiere al menos 1 hora de antelación."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # Regla: RF-13 (Antelación mínima configurable)
+        is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'admin'
+        
+        if not is_admin:
+            from apps.users.models import BusinessConfig
+            config, _ = BusinessConfig.objects.get_or_create(id=1)
+            min_notice = config.min_booking_notice_minutes
+            
+            if start_datetime <= now + timedelta(minutes=min_notice):
+                return Response(
+                    {"error": f"La reserva requiere al menos {min_notice} minutos de antelación."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
         # Regla: RF-13 (Máximo 60 días)
         if start_datetime > now + timedelta(days=60):
@@ -78,31 +91,63 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         # RF-12: Prevención de overbooking transaccional pesimista
         try:
             with transaction.atomic():
-                # Bloquear las citas de este barbero ese día para escritura
-                # `select_for_update()` impide que otra transacción lea esto hasta acabar
-                target_date = start_datetime.date()
-                existing_appts = Appointment.objects.select_for_update().filter(
-                    barber=barber,
-                    start_datetime__date=target_date,
-                    status__in=['pendiente', 'confirmada']
-                )
+                # Determinar el cliente (el admin puede especificar uno)
+                client = request.user
                 
-                # Verificar solapamiento
-                for appt in existing_appts:
-                    if (start_datetime < appt.end_datetime) and (end_datetime > appt.start_datetime):
-                        return Response(
-                            {"error": "Este horario ya ha sido reservado."},
-                            status=status.HTTP_409_CONFLICT
-                        )
+                if is_admin and serializer.validated_data.get('client_id'):
+                    from django.contrib.auth.models import User
+                    try:
+                        client = User.objects.get(id=serializer.validated_data['client_id'])
+                    except User.DoesNotExist:
+                        return Response({"error": "Cliente no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+                # Si es "Sin preferencia", buscar el primer disponible
+                assigned_barber = None
+                day_of_week = start_datetime.weekday()
+                
+                for b in barbers_to_check:
+                    sched = b.schedules.filter(day_of_week=day_of_week, is_working=True).first()
+                    if not sched: continue
+                    
+                    start_t = start_datetime.time()
+                    end_t = end_datetime.time()
+                    if start_t < sched.start_time or end_t > sched.end_time:
+                        continue
+                    
+                    if sched.break_start and sched.break_end:
+                        if (start_t < sched.break_end) and (end_t > sched.break_start):
+                            continue
+                    
+                    existing_appts = Appointment.objects.select_for_update().filter(
+                        barber=b,
+                        start_datetime__date=start_datetime.date(),
+                        status__in=['pendiente', 'confirmada']
+                    )
+                    
+                    overlap = False
+                    for appt in existing_appts:
+                        if (start_datetime < appt.end_datetime) and (end_datetime > appt.start_datetime):
+                            overlap = True
+                            break
+                    
+                    if not overlap:
+                        assigned_barber = b
+                        break
+                
+                if not assigned_barber:
+                    return Response(
+                        {"error": "No hay barberos disponibles para este horario."},
+                        status=status.HTTP_409_CONFLICT
+                    )
                 
                 # Crear cita
                 appointment = Appointment.objects.create(
-                    client=request.user,
-                    barber=barber,
+                    client=client,
+                    barber=assigned_barber,
                     service=service,
                     start_datetime=start_datetime,
                     end_datetime=end_datetime,
-                    status='confirmada',  # confirmada directamente según RF-10
+                    status='confirmada',
                     price_at_booking=service.price
                 )
                 

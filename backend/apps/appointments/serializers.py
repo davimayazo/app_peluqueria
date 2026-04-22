@@ -32,8 +32,9 @@ class AppointmentSerializer(serializers.ModelSerializer):
 class CreateAppointmentSerializer(serializers.Serializer):
     """Serializer de entrada para crear una cita (RF-10)."""
     service_id = serializers.IntegerField()
-    barber_id = serializers.IntegerField()
+    barber_id = serializers.IntegerField(required=False, allow_null=True)
     start_datetime = serializers.DateTimeField()
+    client_id = serializers.IntegerField(required=False, allow_null=True)
 
 
 class ReviewSerializer(serializers.Serializer):

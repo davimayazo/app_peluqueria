@@ -125,17 +125,72 @@ export const fetchAvailableSlots = async (barberId: string, date: string, servic
 };
 
 export const fetchServices = async () => {
-  const res = await fetch(`${API_URL}/services/`);
+  const res = await apiFetch('/services/');
   if (!res.ok) throw new Error('Failed to fetch services');
   const data = await res.json();
   return data.results || data;
 };
 
+export const createService = async (serviceData: Partial<Service>) => {
+  const res = await apiFetch('/services/', {
+    method: 'POST',
+    body: JSON.stringify(serviceData),
+  });
+  if (!res.ok) throw new Error('Error al crear el servicio');
+  return res.json();
+};
+
+export const updateService = async (id: number, serviceData: Partial<Service>) => {
+  const res = await apiFetch(`/services/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(serviceData),
+  });
+  if (!res.ok) throw new Error('Error al actualizar el servicio');
+  return res.json();
+};
+
+export const deleteService = async (id: number) => {
+  const res = await apiFetch(`/services/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.detail || errorData.error || 'No se puede eliminar el servicio (posiblemente tiene citas asociadas). Pruebe a desactivarlo.');
+  }
+  return true;
+};
+
 export const fetchBarbers = async () => {
-  const res = await fetch(`${API_URL}/barbers/`);
+  const res = await apiFetch('/barbers/');
   if (!res.ok) throw new Error('Failed to fetch barbers');
   const data = await res.json();
   return data.results || data;
+};
+
+export const createBarber = async (barberData: any) => {
+  const res = await apiFetch('/barbers/', {
+    method: 'POST',
+    body: JSON.stringify(barberData),
+  });
+  if (!res.ok) throw new Error('Error al crear el barbero');
+  return res.json();
+};
+
+export const updateBarber = async (id: number, barberData: any) => {
+  const res = await apiFetch(`/barbers/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(barberData),
+  });
+  if (!res.ok) throw new Error('Error al actualizar el barbero');
+  return res.json();
+};
+
+export const deleteBarber = async (id: number) => {
+  const res = await apiFetch(`/barbers/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Error al eliminar el barbero');
+  return true;
 };
 
 export const fetchAppointments = async () => {
@@ -183,5 +238,44 @@ export const registerUser = async (userData: RegisterData) => {
 export const fetchProfile = async () => {
   const res = await apiFetch('/users/me/');
   if (!res.ok) throw new Error('Failed to fetch user profile');
+  return res.json();
+};
+
+export const fetchUsers = async () => {
+  const res = await apiFetch('/admin/users/');
+  if (!res.ok) throw new Error('Failed to fetch users');
+  const data = await res.json();
+  return data.results || data;
+};
+
+export const updateUser = async (id: number, userData: Partial<User>) => {
+  const res = await apiFetch(`/admin/users/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) throw new Error('Error al actualizar el usuario');
+  return res.json();
+};
+
+export const deleteUser = async (id: number) => {
+  const res = await apiFetch(`/admin/users/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Error al eliminar el usuario');
+  return true;
+};
+
+export const fetchBusinessConfig = async () => {
+  const res = await fetch(`${API_URL}/config/`);
+  if (!res.ok) throw new Error('Failed to fetch business config');
+  return res.json();
+};
+
+export const updateBusinessConfig = async (configData: any) => {
+  const res = await apiFetch('/config/', {
+    method: 'PATCH',
+    body: JSON.stringify(configData),
+  });
+  if (!res.ok) throw new Error('Error al actualizar la configuración');
   return res.json();
 };

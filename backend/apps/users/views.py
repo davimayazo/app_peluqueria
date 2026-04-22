@@ -43,12 +43,17 @@ class LogoutView(APIView):
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-class BusinessConfigView(generics.RetrieveAPIView):
+class BusinessConfigView(generics.RetrieveUpdateAPIView):
     """
     RF-24: Configuración general del negocio.
     """
     serializer_class = BusinessConfigSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.AllowAny] # Lectura pública
+
+    def get_permissions(self):
+        if self.request.method in ['PATCH', 'PUT']:
+            return [permissions.IsAuthenticated()] # TODO: IsAdmin
+        return [permissions.AllowAny()]
 
     def get_object(self):
         obj, created = BusinessConfig.objects.get_or_create(id=1)
@@ -60,5 +65,12 @@ class UsersListView(generics.ListAPIView):
     """
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    # TODO: Add IsAdmin permission
     permission_classes = [permissions.IsAuthenticated] 
+
+class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Permite al admin gestionar un usuario específico.
+    """
+    serializer_class = UserSerializer
+    queryset = User.objects.all()
+    permission_classes = [permissions.IsAuthenticated] # TODO: Add IsAdmin

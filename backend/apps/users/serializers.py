@@ -70,6 +70,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        phone = validated_data.pop('phone', '')
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email', ''),
@@ -77,7 +78,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             last_name=validated_data.get('last_name', ''),
             password=validated_data['password'],
         )
-        Profile.objects.create(user=user, role='cliente')
+        Profile.objects.create(user=user, role='cliente', phone=phone)
         return user
 
 

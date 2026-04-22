@@ -16,6 +16,7 @@ const registerSchema = z.object({
   last_name: z.string().min(2, 'Los apellidos son obligatorios'),
   username: z.string().min(3, 'El usuario debe tener al menos 3 caracteres'),
   email: z.string().email('Dirección de correo inválida'),
+  phone: z.string().optional(),
   password: z.string()
     .min(8, 'Mínimo 8 caracteres')
     .regex(/[A-Z]/, 'Debe contener al menos una mayúscula')
@@ -106,6 +107,17 @@ export default function RegisterPage() {
                 className={errors.email ? "border-red-500" : ""}
               />
               {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-textMuted">Teléfono (opcional)</label>
+              <Input 
+                type="tel"
+                {...register('phone')}
+                placeholder="+34 600 000 000" 
+                className={errors.phone ? "border-red-500" : ""}
+              />
+              {errors.phone && <p className="text-xs text-red-500">{errors.phone.message}</p>}
             </div>
             
             <div className="grid sm:grid-cols-2 gap-4">

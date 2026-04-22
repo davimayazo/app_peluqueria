@@ -26,8 +26,3 @@ class ServiceViewSet(viewsets.ModelViewSet):
         if user.is_authenticated and hasattr(user, 'profile') and user.profile.role == 'admin':
             return Service.objects.all()
         return Service.objects.filter(is_active=True)
-
-    def perform_destroy(self, instance):
-        """Soft-delete para servicios en uso."""
-        instance.is_active = False
-        instance.save()

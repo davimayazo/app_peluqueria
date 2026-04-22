@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { fetchAppointments, fetchServices, fetchBarbers } from '@/lib/api';
 import { Appointment } from '@/types';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const { data: appointments, isLoading: loadingAppts } = useQuery({
@@ -67,10 +68,10 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
-              <div className="grid lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 gap-8">
                 
                 {/* AGENDA HOY */}
-                <Card className="lg:col-span-2 flex flex-col">
+                <Card className="flex flex-col">
                   <CardHeader>
                     <CardTitle className="text-xl">Agenda de Hoy</CardTitle>
                   </CardHeader>
@@ -103,28 +104,6 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
-
-                {/* QUICK ACTIONS / ALERTS */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-xl">Gestión Rápida</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                     <button className="w-full text-left px-4 py-3 bg-surfaceLayer hover:bg-primary/20 hover:text-primary transition-colors rounded-lg border border-border text-sm font-medium">
-                       Gestionar Servicios
-                     </button>
-                     <button className="w-full text-left px-4 py-3 bg-surfaceLayer hover:bg-primary/20 hover:text-primary transition-colors rounded-lg border border-border text-sm font-medium">
-                       Gestionar Barberos y Horarios
-                     </button>
-                     <button className="w-full text-left px-4 py-3 bg-surfaceLayer hover:bg-primary/20 hover:text-primary transition-colors rounded-lg border border-border text-sm font-medium">
-                       Ver todas las citas
-                     </button>
-                     <button className="w-full text-left px-4 py-3 bg-surfaceLayer hover:bg-primary/20 hover:text-primary transition-colors rounded-lg border border-border text-sm font-medium">
-                       Configuración del negocio
-                     </button>
-                  </CardContent>
-                </Card>
-
               </div>
             </div>
           )}

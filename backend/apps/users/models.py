@@ -45,6 +45,7 @@ class BusinessConfig(models.Model):
     email = models.EmailField(blank=True, default='')
     logo_url = models.URLField(blank=True, default='')
     description = models.TextField(max_length=500, blank=True, default='')
+    min_booking_notice_minutes = models.PositiveIntegerField(default=60) # RF-13
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
