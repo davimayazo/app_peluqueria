@@ -41,7 +41,8 @@ export default function RegisterPage() {
   const onSubmit = async (data: RegisterFormValues) => {
     setError('');
     try {
-      await registerUser(data);
+      const { password_confirm, ...registerData } = data;
+      await registerUser({ ...registerData, password2: data.password });
       router.push('/login?registered=true');
     } catch (err: any) {
       setError(err.message || 'Error al completar el registro');

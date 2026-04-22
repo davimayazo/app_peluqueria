@@ -1,5 +1,5 @@
 import { useAuth } from '@/store/useAuth';
-import { LoginCredentials, RegisterData } from '@/types';
+import { LoginCredentials, RegisterData, Service, User } from '@/types';
 
 export const API_URL = 'http://localhost:8000/api/v1';
 
@@ -165,6 +165,15 @@ export const fetchBarbers = async () => {
   if (!res.ok) throw new Error('Failed to fetch barbers');
   const data = await res.json();
   return data.results || data;
+};
+
+export const createBarber = async (barberData: any) => {
+  const res = await apiFetch('/barbers/', {
+    method: 'POST',
+    body: JSON.stringify(barberData),
+  });
+  if (!res.ok) throw new Error('Error al crear el barbero');
+  return res.json();
 };
 
 export const createAppointment = async (apptData: any) => {

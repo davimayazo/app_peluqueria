@@ -120,7 +120,7 @@ export default function AdminClientes() {
       const { password, ...updateData } = formData;
       updateMutation.mutate({ id: selectedUser.id, data: updateData });
     } else {
-      createMutation.mutate({ ...formData, password_confirm: formData.password });
+      createMutation.mutate({ ...formData, password2: formData.password });
     }
   };
 

@@ -63,7 +63,7 @@ export default function ServiciosPublicPage() {
                       </div>
 
                       <Link href="/reserva" className="block w-full">
-                        <Button className="w-full font-bold tracking-wide" variant="primary">
+                        <Button className="w-full font-bold tracking-wide" variant="default">
                           Reservar Ahora
                         </Button>
                       </Link>

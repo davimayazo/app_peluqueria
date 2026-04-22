@@ -140,7 +140,7 @@ export default function AdminAgenda() {
                 <CardContent>
                   {filteredAppointments.length > 0 ? (
                     <div className="space-y-4">
-                      {filteredAppointments.sort((a, b) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
+                      {filteredAppointments.sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
                         <div key={appt.id} className={`flex flex-col md:flex-row md:items-center justify-between p-5 bg-surface rounded-xl border transition-all group ${appt.status === 'pendiente' ? 'border-primary/30' : 'border-border/50'}`}>
                           <div className="flex gap-6 items-center">
                             <div className="text-center">

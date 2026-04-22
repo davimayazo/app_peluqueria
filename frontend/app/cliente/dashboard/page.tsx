@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isPast, isFuture, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { fetchAppointments, cancelAppointment } from '@/lib/api';
 import { Appointment } from '@/types';
@@ -34,128 +34,149 @@ export default function ClienteDashboard() {
   const getStatusBadge = (status: string) => {
     switch(status) {
       case 'pendiente':
-        return <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-semibold border border-yellow-500/30">Pendiente</span>;
+        return <span className="px-3 py-1 bg-yellow-500/10 text-yellow-400 rounded-full text-[10px] font-bold border border-yellow-500/20 uppercase tracking-wider">Pendiente</span>;
       case 'confirmada':
-        return <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs font-semibold border border-green-500/30">Confirmada</span>;
+        return <span className="px-3 py-1 bg-green-500/10 text-green-400 rounded-full text-[10px] font-bold border border-green-500/20 uppercase tracking-wider">Confirmada</span>;
       case 'cancelada':
-        return <span className="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-semibold border border-red-500/30">Cancelada</span>;
+        return <span className="px-3 py-1 bg-red-500/10 text-red-400 rounded-full text-[10px] font-bold border border-red-500/20 uppercase tracking-wider">Cancelada</span>;
       case 'completada':
-        return <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-full text-xs font-semibold border border-blue-500/30">Completada</span>;
+        return <span className="px-3 py-1 bg-blue-500/10 text-blue-400 rounded-full text-[10px] font-bold border border-blue-500/20 uppercase tracking-wider">Completada</span>;
       default:
-        return <span className="px-3 py-1 bg-gray-500/20 text-gray-400 rounded-full text-xs font-semibold">{status}</span>;
+        return <span className="px-3 py-1 bg-gray-500/10 text-gray-400 rounded-full text-[10px] font-bold border border-gray-500/20 uppercase tracking-wider">{status}</span>;
     }
   };
 
-  const upcomingAppts = appointments?.filter((a: Appointment) => isFuture(parseISO(a.start_datetime)) && a.status !== 'cancelada' && a.status !== 'completada').sort((a: Appointment, b: Appointment) => new Date(a.start_datetime).getTime() - new Date(b.start_datetime).getTime());
-  const pastAppts = appointments?.filter((a: Appointment) => isPast(parseISO(a.start_datetime)) || a.status === 'cancelada' || a.status === 'completada').sort((a: Appointment, b: Appointment) => new Date(b.start_datetime).getTime() - new Date(a.start_datetime).getTime());
+  const upcomingAppts = appointments?.filter((a: Appointment) => 
+    (isFuture(parseISO(a.start_datetime)) || isToday(parseISO(a.start_datetime))) && 
+    a.status !== 'cancelada' && 
+    a.status !== 'completada'
+  ).sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)) || [];
+
+  const pastAppts = appointments?.filter((a: Appointment) => 
+    isPast(parseISO(a.start_datetime)) || 
+    a.status === 'cancelada' || 
+    a.status === 'completada'
+  ).sort((a: Appointment, b: Appointment) => b.start_datetime.localeCompare(a.start_datetime)) || [];
+
+  function isToday(date: Date) {
+    const today = new Date();
+    return date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear();
+  }
 
   return (
     <ProtectedRoute allowedRoles={['cliente', 'admin']}>
-      <div className="text-textMain">
-        <div className="mb-8 border-b border-border pb-4 flex justify-between items-end">
+      <div className="space-y-10">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-border pb-6">
           <div>
-            <h1 className="text-3xl font-display font-bold text-primary mb-2">Mi Perfil</h1>
-            <p className="text-textMuted">Gestiona y revisa todas tus citas</p>
+            <h1 className="text-4xl font-display font-bold text-white mb-2">Mi Perfil</h1>
+            <p className="text-textMuted">Bienvenido a tu espacio personal de BarberBook</p>
           </div>
-          <Button variant="default" onClick={() => window.location.href='/reserva'}>Nueva Cita</Button>
-        </div>
+          <Button onClick={() => window.location.href='/reserva'} className="bg-primary text-black font-bold hover:bg-primary/90">
+            Nueva Reserva
+          </Button>
+        </header>
 
         {isLoading ? (
-          <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div></div>
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-primary"></div>
+          </div>
         ) : error ? (
-          <div className="bg-red-500/10 border border-red-500 text-red-500 p-6 rounded-xl text-center">
-            Error al cargar las citas. Por favor, intenta de nuevo más tarde.
+          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-center">
+            No se han podido cargar tus citas. Por favor, inténtalo más tarde.
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-8">
+          <div className="grid lg:grid-cols-2 gap-12">
             {/* Próximas Citas */}
-            <div>
-              <h2 className="text-xl font-semibold mb-6 flex items-center border-l-4 border-primary pl-3">Próximas Citas</h2>
-              {upcomingAppts?.length > 0 ? (
-                <div className="space-y-4">
+            <section>
+              <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                <span className="w-2 h-2 bg-primary rounded-full"></span>
+                Próximas Citas
+              </h2>
+              {upcomingAppts.length > 0 ? (
+                <div className="space-y-6">
                   {upcomingAppts.map((appt: Appointment) => (
-                    <Card key={appt.id} className="border-border hover:border-primary/50 transition-colors bg-surface">
-                      <CardContent className="p-5">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <h3 className="font-semibold text-lg text-white mb-1">{appt.service_name}</h3>
-                            <p className="text-sm text-textMuted flex items-center">
-                              <span className="inline-block w-4 h-4 mr-2 rounded-full bg-surfaceLayer text-primary flex items-center justify-center text-[10px]">🤵</span> 
-                              {appt.barber_name}
-                            </p>
+                    <Card key={appt.id} className="bg-surface border-border/40 hover:border-primary/30 transition-all overflow-hidden group">
+                      <CardContent className="p-0">
+                        <div className="p-6">
+                          <div className="flex justify-between items-start mb-6">
+                            <div>
+                              <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors">{appt.service_name}</h3>
+                              <p className="text-textMuted text-sm flex items-center gap-2 mt-1">
+                                <span className="text-primary">●</span> {appt.barber_name}
+                              </p>
+                            </div>
+                            {getStatusBadge(appt.status)}
                           </div>
-                          {getStatusBadge(appt.status)}
-                        </div>
-                        <div className="bg-surfaceLayer rounded-lg p-4 flex flex-col sm:flex-row justify-between items-center sm:items-start gap-3">
-                          <div className="text-center sm:text-left">
-                            <p className="text-primary font-bold text-xl capitalize">
-                              {format(parseISO(appt.start_datetime), "d 'de' MMMM", { locale: es })}
-                            </p>
-                            <p className="text-white text-lg">
-                              {format(parseISO(appt.start_datetime), "HH:mm")} hs
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-textMuted">Duración: {appt.service_duration} min</p>
-                            <p className="text-primary font-semibold text-lg">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
+                          
+                          <div className="flex items-center justify-between bg-surfaceLayer/50 rounded-2xl p-4 border border-border/20">
+                            <div className="flex items-center gap-4">
+                              <div className="text-center bg-background p-2 rounded-xl min-w-[60px] border border-border/30">
+                                <p className="text-xs text-textMuted uppercase font-bold">{format(parseISO(appt.start_datetime), "MMM", { locale: es })}</p>
+                                <p className="text-xl font-bold text-primary">{format(parseISO(appt.start_datetime), "dd")}</p>
+                              </div>
+                              <div>
+                                <p className="text-lg font-bold text-white">{format(parseISO(appt.start_datetime), "HH:mm")} hs</p>
+                                <p className="text-xs text-textMuted">Duración: {appt.service_duration} min</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xl font-bold text-white">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
+                            </div>
                           </div>
                         </div>
                         
-                        {/* Botón de cancelar */}
-                        <div className="mt-4 pt-4 border-t border-border flex justify-end">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        <div className="px-6 py-4 bg-surfaceLayer/30 border-t border-border/10 flex justify-end">
+                          <button 
                             onClick={() => handleCancel(appt.id, appt.service_name)}
                             disabled={cancelMutation.isPending}
+                            className="text-xs font-bold text-red-500/70 hover:text-red-400 transition-colors uppercase tracking-widest disabled:opacity-50"
                           >
-                            {cancelMutation.isPending ? 'Cancelando...' : 'Cancelar Cita'}
-                          </Button>
+                            {cancelMutation.isPending ? 'Procesando...' : 'Cancelar Cita'}
+                          </button>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
               ) : (
-                <Card className="border-dashed border-2 border-border bg-transparent">
-                  <CardContent className="p-8 text-center text-textMuted flex flex-col items-center justify-center h-48">
-                    <p className="mb-4">No tienes próximas citas reservadas.</p>
-                    <Button variant="outline" onClick={() => window.location.href='/reserva'}>Reserva ahora</Button>
-                  </CardContent>
-                </Card>
+                <div className="py-16 text-center border-2 border-dashed border-border/30 rounded-[2rem] bg-surface/20">
+                  <p className="text-textMuted mb-6">No tienes ninguna cita programada.</p>
+                  <Button variant="outline" onClick={() => window.location.href='/reserva'}>Hacer mi primera reserva</Button>
+                </div>
               )}
-            </div>
+            </section>
 
             {/* Historial */}
-            <div>
-              <h2 className="text-xl font-semibold mb-6 flex items-center border-l-4 border-surfaceLayer pl-3 text-textMuted">Historial</h2>
-              {pastAppts?.length > 0 ? (
+            <section>
+              <h2 className="text-xl font-bold text-textMuted mb-6 flex items-center gap-3">
+                <span className="w-2 h-2 bg-textMuted/30 rounded-full"></span>
+                Historial de Servicios
+              </h2>
+              {pastAppts.length > 0 ? (
                 <div className="space-y-4">
                   {pastAppts.map((appt: Appointment) => (
-                    <Card key={appt.id} className="border-border bg-surfaceLayer/30 opacity-70">
-                      <CardContent className="p-5">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium text-white">{appt.service_name}</h3>
-                          {getStatusBadge(appt.status)}
-                        </div>
-                        <p className="text-sm text-textMuted mb-2">Con {appt.barber_name}</p>
-                        <div className="flex justify-between items-center text-sm">
-                          <span className="text-gray-400 capitalize">
-                            {format(parseISO(appt.start_datetime), "d MMM, yyyy - HH:mm", { locale: es })}
-                          </span>
-                          <span className="font-semibold text-white">{parseFloat(appt.price_at_booking).toFixed(2)} €</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    <div key={appt.id} className="p-5 bg-surface/40 border border-border/20 rounded-2xl flex justify-between items-center opacity-70 hover:opacity-100 transition-opacity">
+                      <div>
+                        <p className="font-bold text-white">{appt.service_name}</p>
+                        <p className="text-xs text-textMuted mt-1">
+                          {format(parseISO(appt.start_datetime), "dd/MM/yyyy HH:mm")} • {appt.barber_name}
+                        </p>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-2">
+                        <span className="text-sm font-bold text-white">{parseFloat(appt.price_at_booking).toFixed(2)} €</span>
+                        {getStatusBadge(appt.status)}
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
-                <div className="p-8 text-center text-textMuted border border-border rounded-xl">
-                  <p>Aún no tienes un historial de citas.</p>
+                <div className="py-10 text-center text-textMuted border border-border/20 rounded-2xl">
+                  <p>Aún no tienes historial de citas.</p>
                 </div>
               )}
-            </div>
+            </section>
           </div>
         )}
       </div>

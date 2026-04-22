@@ -135,7 +135,7 @@ export default function AdminBarberos() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const data = {
+    const data: any = {
       ...formData,
       specialties: formData.specialties.split(',').map(s => s.trim()).filter(s => s !== '')
     };
