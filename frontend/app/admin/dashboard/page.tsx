@@ -7,8 +7,8 @@ import { es } from 'date-fns/locale';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { fetchAppointments, fetchServices, fetchBarbers } from '@/lib/api';
-import { Appointment, Barber, Service } from '@/types';
+import { fetchAppointments, fetchServices, fetchBarbers, fetchUsers } from '@/lib/api';
+import { Appointment, Barber, Service, User } from '@/types';
 import { Button } from '@/components/ui/Button';
 
 export default function AdminDashboard() {
@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [endDate, setEndDate] = useState(todayStr);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
 
   const { data: appointments, isLoading: loadingAppts } = useQuery<Appointment[]>({
     queryKey: ['admin_appointments'],
@@ -25,6 +26,7 @@ export default function AdminDashboard() {
 
   const { data: services } = useQuery({ queryKey: ['services'], queryFn: fetchServices });
   const { data: barbers } = useQuery({ queryKey: ['barbers'], queryFn: fetchBarbers });
+  const { data: allUsers } = useQuery({ queryKey: ['admin_users'], queryFn: fetchUsers });
 
   // Shortcuts
   const setRange = (type: 'today' | 'week' | 'month') => {
@@ -50,6 +52,13 @@ export default function AdminDashboard() {
   const activeAppointments = rangeAppointments.filter((a: Appointment) => a.status === 'confirmada' || a.status === 'completada');
   const totalRevenue = activeAppointments.reduce((acc: number, curr: Appointment) => acc + parseFloat(curr.price_at_booking), 0);
   
+  const newCustomers = allUsers?.filter((u: User) => {
+    // Solo contar clientes (no admins) que se unieron en el rango
+    if (u.profile?.role !== 'cliente') return false;
+    const joinDate = format(parseISO(u.date_joined), 'yyyy-MM-dd');
+    return joinDate >= startDate && joinDate <= endDate;
+  }) || [];
+
   // Calculate Per-Barber Metrics
   const barberStats = barbers?.map((barber: Barber) => {
     const appts = activeAppointments.filter(a => a.barber === barber.id);
@@ -149,7 +158,7 @@ export default function AdminDashboard() {
             <div className="space-y-8 animate-in fade-in duration-500">
               
               {/* METRICS ROW */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
                   <CardContent className="p-6 relative">
                     <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
@@ -175,7 +184,6 @@ export default function AdminDashboard() {
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                     </p>
                     <h3 className="text-3xl font-bold text-white">{services?.length || 0}</h3>
-                    <p className="text-[10px] text-textMuted mt-1">Pulsa para ver ingresos por servicio</p>
                   </CardContent>
                 </Card>
                 <Card 
@@ -189,7 +197,19 @@ export default function AdminDashboard() {
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                     </p>
                     <h3 className="text-3xl font-bold text-white">{barbers?.length || 0}</h3>
-                    <p className="text-[10px] text-textMuted mt-1">Pulsa para ver ingresos por staff</p>
+                  </CardContent>
+                </Card>
+                <Card 
+                  className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                  onClick={() => setIsUserModalOpen(true)}
+                >
+                  <CardContent className="p-6 relative">
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all"></div>
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                      Clientes Nuevos 
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </p>
+                    <h3 className="text-3xl font-bold text-white">{newCustomers.length}</h3>
                   </CardContent>
                 </Card>
               </div>
@@ -352,18 +372,51 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* NEW CUSTOMERS MODAL */}
+          {isUserModalOpen && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-surfaceLayer border border-border w-full max-w-4xl rounded-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-8 border-b border-border/30 pb-6">
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-white">Nuevos Clientes</h2>
+                    <p className="text-primary font-medium">Registrados en: {rangeLabel}</p>
+                  </div>
+                  <button onClick={() => setIsUserModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-textMuted"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {newCustomers.map((user: User) => (
+                    <Card key={user.id} className="bg-background/40 border-border/40 overflow-hidden">
+                      <CardContent className="p-6 flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold border border-primary/20">
+                          {user.first_name.charAt(0)}{user.last_name.charAt(0)}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-white">{user.full_name}</h4>
+                          <p className="text-xs text-textMuted">{user.email}</p>
+                          <p className="text-[10px] text-primary mt-1">Registrado el {format(parseISO(user.date_joined), "d 'de' MMMM", { locale: es })}</p>
+                        </div>
+                        <div className="ml-auto">
+                          <Button size="sm" variant="outline" onClick={() => window.location.href='/admin/clientes'}>
+                            Ver Ficha
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
                   
-                  {serviceStats.length === 0 && (
-                    <div className="py-20 text-center border-2 border-dashed border-border/30 rounded-3xl">
-                      <p className="text-textMuted">No hay datos de servicios para este periodo.</p>
+                  {newCustomers.length === 0 && (
+                    <div className="col-span-full py-20 text-center border-2 border-dashed border-border/30 rounded-3xl">
+                      <p className="text-textMuted">No hay registros de nuevos clientes en este periodo.</p>
                     </div>
                   )}
-                </div>
-                
-                <div className="mt-10 pt-6 border-t border-border/30 text-center">
-                  <p className="text-textMuted text-sm">
-                    Ingresos totales de servicios en este periodo: <span className="text-primary font-bold">{totalRevenue.toFixed(2)} €</span>
-                  </p>
                 </div>
               </div>
             </div>
