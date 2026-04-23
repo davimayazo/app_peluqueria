@@ -8,13 +8,14 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { fetchAppointments, fetchServices, fetchBarbers } from '@/lib/api';
-import { Appointment } from '@/types';
+import { Appointment, Barber } from '@/types';
 import { Button } from '@/components/ui/Button';
 
 export default function AdminDashboard() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
 
   const { data: appointments, isLoading: loadingAppts } = useQuery<Appointment[]>({
     queryKey: ['admin_appointments'],
@@ -48,6 +49,25 @@ export default function AdminDashboard() {
   const activeAppointments = rangeAppointments.filter((a: Appointment) => a.status === 'confirmada' || a.status === 'completada');
   const totalRevenue = activeAppointments.reduce((acc: number, curr: Appointment) => acc + parseFloat(curr.price_at_booking), 0);
   
+  // Calculate Per-Barber Metrics
+  const barberStats = barbers?.map((barber: Barber) => {
+    const appts = activeAppointments.filter(a => a.barber === barber.id);
+    const revenue = appts.reduce((acc, curr) => acc + parseFloat(curr.price_at_booking), 0);
+    const servicesCount = appts.length;
+    
+    const servicesSummary = appts.reduce((acc: Record<string, number>, curr) => {
+      acc[curr.service_name] = (acc[curr.service_name] || 0) + 1;
+      return acc;
+    }, {});
+
+    return {
+      ...barber,
+      revenue,
+      servicesCount,
+      servicesSummary
+    };
+  }).sort((a: any, b: any) => b.revenue - a.revenue) || [];
+
   const isSingleDay = startDate === endDate;
   const rangeLabel = isSingleDay 
     ? (startDate === todayStr ? 'Hoy' : format(parseISO(startDate), "d 'de' MMMM", { locale: es }))
@@ -131,18 +151,25 @@ export default function AdminDashboard() {
                     <h3 className="text-3xl font-bold text-primary">{totalRevenue.toFixed(2)} €</h3>
                   </CardContent>
                 </Card>
-                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group cursor-pointer hover:bg-surfaceLayer/80 transition-all" onClick={() => window.location.href='/admin/servicios'}>
                   <CardContent className="p-6 relative">
                     <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
                     <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Servicios Ofrecidos</p>
                     <h3 className="text-3xl font-bold text-white">{services?.length || 0}</h3>
                   </CardContent>
                 </Card>
-                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                <Card 
+                  className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                  onClick={() => setIsStaffModalOpen(true)}
+                >
                   <CardContent className="p-6 relative">
-                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
-                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Staff Activo</p>
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all"></div>
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                      Staff Activo 
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </p>
                     <h3 className="text-3xl font-bold text-white">{barbers?.length || 0}</h3>
+                    <p className="text-[10px] text-textMuted mt-1">Pulsa para ver ingresos por staff</p>
                   </CardContent>
                 </Card>
               </div>
@@ -165,7 +192,7 @@ export default function AdminDashboard() {
                   <CardContent className="flex-1 pt-6">
                     {rangeAppointments.length > 0 ? (
                       <div className="space-y-3">
-                        {[...rangeAppointments].sort((a,b) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
+                        {[...rangeAppointments].sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
                           <div key={appt.id} className="flex items-center justify-between p-4 bg-surface Layer/20 rounded-xl border border-border/30 hover:border-primary/30 transition-all group">
                             <div className="flex gap-4 items-center">
                               <div className="text-center min-w-[70px]">
@@ -199,6 +226,73 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
+              </div>
+            </div>
+          )}
+
+          {/* STAFF METRICS MODAL */}
+          {isStaffModalOpen && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-surfaceLayer border border-border w-full max-w-4xl rounded-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-8 border-b border-border/30 pb-6">
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-white">Rendimiento del Staff</h2>
+                    <p className="text-primary font-medium">{rangeLabel}</p>
+                  </div>
+                  <button onClick={() => setIsStaffModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-textMuted"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {barberStats.map((barber: any) => (
+                    <Card key={barber.id} className="bg-background/40 border-border/40 overflow-hidden hover:border-primary/40 transition-all">
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary text-xl font-bold border border-primary/20">
+                            {barber.full_name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-bold text-white">{barber.full_name}</h4>
+                            <p className="text-sm text-textMuted">{barber.servicesCount} servicios realizados</p>
+                          </div>
+                          <div className="ml-auto text-right">
+                            <p className="text-xs uppercase text-textMuted font-bold tracking-widest mb-1">Ingresos</p>
+                            <p className="text-2xl font-display font-bold text-primary">{barber.revenue.toFixed(2)} €</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <p className="text-xs font-bold text-textMuted uppercase tracking-widest border-b border-border/20 pb-2">Desglose de Servicios</p>
+                          {Object.keys(barber.servicesSummary).length > 0 ? (
+                            Object.entries(barber.servicesSummary).map(([name, count]: [string, any]) => (
+                              <div key={name} className="flex justify-between items-center text-sm">
+                                <span className="text-white/80">{name}</span>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-textMuted">x{count}</span>
+                                  <div className="w-20 bg-border/30 h-1.5 rounded-full overflow-hidden">
+                                    <div 
+                                      className="bg-primary h-full rounded-full" 
+                                      style={{ width: `${(Number(count) / barber.servicesCount) * 100}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-sm text-textMuted italic py-2">Sin actividad en este periodo.</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                <div className="mt-10 pt-6 border-t border-border/30 text-center">
+                  <p className="text-textMuted text-sm">
+                    Ingresos totales del staff en este periodo: <span className="text-primary font-bold">{totalRevenue.toFixed(2)} €</span>
+                  </p>
+                </div>
               </div>
             </div>
           )}
