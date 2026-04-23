@@ -46,6 +46,15 @@ class BusinessConfig(models.Model):
     logo_url = models.URLField(blank=True, default='')
     description = models.TextField(max_length=500, blank=True, default='')
     min_booking_notice_minutes = models.PositiveIntegerField(default=60) # RF-13
+
+    # Dashboard Widgets Config
+    show_appointments_widget = models.BooleanField(default=True)
+    show_revenue_widget = models.BooleanField(default=True)
+    show_services_widget = models.BooleanField(default=True)
+    show_staff_widget = models.BooleanField(default=True)
+    show_new_customers_widget = models.BooleanField(default=True)
+    show_agenda_widget = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

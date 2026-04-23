@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { fetchAppointments, fetchServices, fetchBarbers, fetchUsers } from '@/lib/api';
+import { fetchAppointments, fetchServices, fetchBarbers, fetchUsers, fetchBusinessConfig } from '@/lib/api';
 import { Appointment, Barber, Service, User } from '@/types';
 import { Button } from '@/components/ui/Button';
 
@@ -27,6 +27,7 @@ export default function AdminDashboard() {
   const { data: services } = useQuery({ queryKey: ['services'], queryFn: fetchServices });
   const { data: barbers } = useQuery({ queryKey: ['barbers'], queryFn: fetchBarbers });
   const { data: allUsers } = useQuery({ queryKey: ['admin_users'], queryFn: fetchUsers });
+  const { data: config } = useQuery({ queryKey: ['business_config'], queryFn: fetchBusinessConfig });
 
   // Shortcuts
   const setRange = (type: 'today' | 'week' | 'month') => {
@@ -53,7 +54,6 @@ export default function AdminDashboard() {
   const totalRevenue = activeAppointments.reduce((acc: number, curr: Appointment) => acc + parseFloat(curr.price_at_booking), 0);
   
   const newCustomers = allUsers?.filter((u: User) => {
-    // Solo contar clientes (no admins) que se unieron en el rango
     if (u.profile?.role !== 'cliente') return false;
     const joinDate = format(parseISO(u.date_joined), 'yyyy-MM-dd');
     return joinDate >= startDate && joinDate <= endDate;
@@ -94,6 +94,23 @@ export default function AdminDashboard() {
   const rangeLabel = isSingleDay 
     ? (startDate === todayStr ? 'Hoy' : format(parseISO(startDate), "d 'de' MMMM", { locale: es }))
     : `${format(parseISO(startDate), "d MMM", { locale: es })} - ${format(parseISO(endDate), "d MMM", { locale: es })}`;
+
+  // Configuration for widgets visibility
+  const showAppointments = config?.show_appointments_widget ?? true;
+  const showRevenue = config?.show_revenue_widget ?? true;
+  const showServices = config?.show_services_widget ?? true;
+  const showStaff = config?.show_staff_widget ?? true;
+  const showNewCustomers = config?.show_new_customers_widget ?? true;
+  const showAgenda = config?.show_agenda_widget ?? true;
+
+  // Calculate dynamic grid columns
+  const activeWidgetsCount = [showAppointments, showRevenue, showServices, showStaff, showNewCustomers].filter(Boolean).length;
+  const gridColsClass = 
+    activeWidgetsCount === 5 ? 'lg:grid-cols-5' :
+    activeWidgetsCount === 4 ? 'lg:grid-cols-4' :
+    activeWidgetsCount === 3 ? 'lg:grid-cols-3' :
+    activeWidgetsCount === 2 ? 'lg:grid-cols-2' :
+    'lg:grid-cols-1';
 
   return (
     <ProtectedRoute allowedRoles={['admin']}>
@@ -158,115 +175,130 @@ export default function AdminDashboard() {
             <div className="space-y-8 animate-in fade-in duration-500">
               
               {/* METRICS ROW */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
-                  <CardContent className="p-6 relative">
-                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
-                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Citas del Periodo</p>
-                    <h3 className="text-3xl font-bold text-white">{rangeAppointments.length}</h3>
-                  </CardContent>
-                </Card>
-                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
-                  <CardContent className="p-6 relative">
-                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
-                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Ingresos Estimados</p>
-                    <h3 className="text-3xl font-bold text-primary">{totalRevenue.toFixed(2)} €</h3>
-                  </CardContent>
-                </Card>
-                <Card 
-                  className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
-                  onClick={() => setIsServiceModalOpen(true)}
-                >
-                  <CardContent className="p-6 relative">
-                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
-                      Servicios 
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </p>
-                    <h3 className="text-3xl font-bold text-white">{services?.length || 0}</h3>
-                  </CardContent>
-                </Card>
-                <Card 
-                  className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
-                  onClick={() => setIsStaffModalOpen(true)}
-                >
-                  <CardContent className="p-6 relative">
-                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all"></div>
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
-                      Staff Activo 
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </p>
-                    <h3 className="text-3xl font-bold text-white">{barbers?.length || 0}</h3>
-                  </CardContent>
-                </Card>
-                <Card 
-                  className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
-                  onClick={() => setIsUserModalOpen(true)}
-                >
-                  <CardContent className="p-6 relative">
-                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all"></div>
-                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
-                      Clientes Nuevos 
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    </p>
-                    <h3 className="text-3xl font-bold text-white">{newCustomers.length}</h3>
-                  </CardContent>
-                </Card>
+              <div className={`grid grid-cols-1 md:grid-cols-2 ${gridColsClass} gap-4`}>
+                {showAppointments && (
+                  <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                    <CardContent className="p-6 relative">
+                      <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                      <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Citas del Periodo</p>
+                      <h3 className="text-3xl font-bold text-white">{rangeAppointments.length}</h3>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {showRevenue && (
+                  <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                    <CardContent className="p-6 relative">
+                      <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                      <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Ingresos Estimados</p>
+                      <h3 className="text-3xl font-bold text-primary">{totalRevenue.toFixed(2)} €</h3>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {showServices && (
+                  <Card 
+                    className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                    onClick={() => setIsServiceModalOpen(true)}
+                  >
+                    <CardContent className="p-6 relative">
+                      <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
+                      <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                        Servicios 
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      </p>
+                      <h3 className="text-3xl font-bold text-white">{services?.length || 0}</h3>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {showStaff && (
+                  <Card 
+                    className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                    onClick={() => setIsStaffModalOpen(true)}
+                  >
+                    <CardContent className="p-6 relative">
+                      <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all"></div>
+                      <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                        Staff Activo 
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      </p>
+                      <h3 className="text-3xl font-bold text-white">{barbers?.length || 0}</h3>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {showNewCustomers && (
+                  <Card 
+                    className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                    onClick={() => setIsUserModalOpen(true)}
+                  >
+                    <CardContent className="p-6 relative">
+                      <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/20 rounded-full blur-2xl group-hover:bg-primary/30 transition-all"></div>
+                      <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                        Clientes Nuevos 
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      </p>
+                      <h3 className="text-3xl font-bold text-white">{newCustomers.length}</h3>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 gap-8">
-                
-                {/* AGENDA PERIODICA */}
-                <Card className="flex flex-col border-border/40 shadow-2xl">
-                  <CardHeader className="border-b border-border/30 pb-4">
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        <span className="w-2 h-2 bg-primary rounded-full"></span>
-                        Agenda: {rangeLabel}
-                      </CardTitle>
-                      <Button variant="outline" size="sm" onClick={() => window.location.href='/admin/agenda'}>
-                        Ver Agenda Completa
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-1 pt-6">
-                    {rangeAppointments.length > 0 ? (
-                      <div className="space-y-3">
-                        {[...rangeAppointments].sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
-                          <div key={appt.id} className="flex items-center justify-between p-4 bg-surface Layer/20 rounded-xl border border-border/30 hover:border-primary/30 transition-all group">
-                            <div className="flex gap-4 items-center">
-                              <div className="text-center min-w-[70px]">
-                                <p className="font-bold text-primary">{format(parseISO(appt.start_datetime), "HH:mm")}</p>
-                                {!isSingleDay && <p className="text-[10px] text-textMuted uppercase">{format(parseISO(appt.start_datetime), "d MMM")}</p>}
+              {showAgenda && (
+                <div className="grid grid-cols-1 gap-8">
+                  {/* AGENDA PERIODICA */}
+                  <Card className="flex flex-col border-border/40 shadow-2xl">
+                    <CardHeader className="border-b border-border/30 pb-4">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-xl flex items-center gap-2">
+                          <span className="w-2 h-2 bg-primary rounded-full"></span>
+                          Agenda: {rangeLabel}
+                        </CardTitle>
+                        <Button variant="outline" size="sm" onClick={() => window.location.href='/admin/agenda'}>
+                          Ver Agenda Completa
+                        </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex-1 pt-6">
+                      {rangeAppointments.length > 0 ? (
+                        <div className="space-y-3">
+                          {[...rangeAppointments].sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
+                            <div key={appt.id} className="flex items-center justify-between p-4 bg-surface Layer/20 rounded-xl border border-border/30 hover:border-primary/30 transition-all group">
+                              <div className="flex gap-4 items-center">
+                                <div className="text-center min-w-[70px]">
+                                  <p className="font-bold text-primary">{format(parseISO(appt.start_datetime), "HH:mm")}</p>
+                                  {!isSingleDay && <p className="text-[10px] text-textMuted uppercase">{format(parseISO(appt.start_datetime), "d MMM")}</p>}
+                                </div>
+                                <div className="h-10 w-[1px] bg-border/50"></div>
+                                <div>
+                                  <p className="font-bold text-white group-hover:text-primary transition-colors">{appt.client_name}</p>
+                                  <p className="text-xs text-textMuted">{appt.service_name} • <span className="text-primary/80 font-medium">{appt.barber_name}</span></p>
+                                </div>
                               </div>
-                              <div className="h-10 w-[1px] bg-border/50"></div>
-                              <div>
-                                <p className="font-bold text-white group-hover:text-primary transition-colors">{appt.client_name}</p>
-                                <p className="text-xs text-textMuted">{appt.service_name} • <span className="text-primary/80 font-medium">{appt.barber_name}</span></p>
+                              <div className="flex flex-col items-end gap-1">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                  appt.status === 'completada' ? 'bg-green-500/10 text-green-500' :
+                                  appt.status === 'cancelada' ? 'bg-red-500/10 text-red-500' :
+                                  'bg-blue-500/10 text-blue-400'
+                                }`}>
+                                  {appt.status}
+                                </span>
+                                <p className="text-xs font-bold text-white">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
                               </div>
                             </div>
-                            <div className="flex flex-col items-end gap-1">
-                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                 appt.status === 'completada' ? 'bg-green-500/10 text-green-500' :
-                                 appt.status === 'cancelada' ? 'bg-red-500/10 text-red-500' :
-                                 'bg-blue-500/10 text-blue-400'
-                               }`}>
-                                 {appt.status}
-                               </span>
-                               <p className="text-xs font-bold text-white">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-textMuted py-20 border-2 border-dashed border-border/30 rounded-3xl bg-surface/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 opacity-20"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        <p className="text-lg">No hay citas registradas para este periodo.</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-textMuted py-20 border-2 border-dashed border-border/30 rounded-3xl bg-surface/10">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 opacity-20"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                          <p className="text-lg">No hay citas registradas para este periodo.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
           )}
 
@@ -411,12 +443,6 @@ export default function AdminDashboard() {
                       </CardContent>
                     </Card>
                   ))}
-                  
-                  {newCustomers.length === 0 && (
-                    <div className="col-span-full py-20 text-center border-2 border-dashed border-border/30 rounded-3xl">
-                      <p className="text-textMuted">No hay registros de nuevos clientes en este periodo.</p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
