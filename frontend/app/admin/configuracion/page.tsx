@@ -12,6 +12,7 @@ export default function AdminConfiguracion() {
     name: '',
     email: '',
     address: '',
+    phone: '',
     min_booking_notice_minutes: 60,
     show_appointments_widget: true,
     show_revenue_widget: true,
@@ -34,6 +35,7 @@ export default function AdminConfiguracion() {
         name: config.name || '',
         email: config.email || '',
         address: config.address || '',
+        phone: config.phone || '',
         min_booking_notice_minutes: config.min_booking_notice_minutes || 60,
         show_appointments_widget: config.show_appointments_widget ?? true,
         show_revenue_widget: config.show_revenue_widget ?? true,
@@ -129,14 +131,25 @@ export default function AdminConfiguracion() {
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-textMuted mb-1">Dirección</label>
-                    <input 
-                      type="text" 
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      className="w-full bg-surfaceLayer border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    />
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-textMuted mb-1">Dirección</label>
+                      <input 
+                        type="text" 
+                        value={formData.address}
+                        onChange={(e) => setFormData({...formData, address: e.target.value})}
+                        className="w-full bg-surfaceLayer border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-textMuted mb-1">Teléfono de Contacto</label>
+                      <input 
+                        type="text" 
+                        value={formData.phone}
+                        onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                        className="w-full bg-surfaceLayer border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
