@@ -3,14 +3,19 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isPast, isFuture, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-import { Card, CardContent } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { fetchAppointments, cancelAppointment } from '@/lib/api';
+import { fetchAppointments, cancelAppointment, fetchProfile } from '@/lib/api';
 import { Appointment } from '@/types';
 import { Button } from '@/components/ui/Button';
 
 export default function ClienteDashboard() {
   const queryClient = useQueryClient();
+
+  const { data: profile } = useQuery({
+    queryKey: ['profile'],
+    queryFn: fetchProfile
+  });
 
   const { data: appointments, isLoading, error } = useQuery({
     queryKey: ['appointments'],
@@ -77,6 +82,35 @@ export default function ClienteDashboard() {
             Nueva Reserva
           </Button>
         </header>
+
+        {/* Widgets Superiores (Puntos, etc) */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-primary/20 overflow-hidden relative group">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+            <CardContent className="p-6 flex items-center gap-6">
+              <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center text-black shadow-lg shadow-primary/20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/><path d="m17.41 17.41-.71.7-2.83-2.82"/></svg>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-primary uppercase tracking-widest mb-1">Mis Puntos</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-4xl font-display font-bold text-white">{profile?.profile?.points || 0}</span>
+                  <span className="text-textMuted font-medium text-sm">puntos acumulados</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-surface border-border/40 md:col-span-2">
+            <CardContent className="p-6 flex flex-col justify-center">
+              <h4 className="text-white font-bold mb-2">¡Fidelidad Premiada!</h4>
+              <p className="text-textMuted text-sm leading-relaxed">
+                Cada vez que vienes a vernos acumulas puntos que podrás canjear por descuentos y servicios exclusivos. 
+                ¡Pregunta a tu barbero en tu próxima visita!
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
         {isLoading ? (
           <div className="flex justify-center py-20">

@@ -7,8 +7,8 @@ from .models import Profile, BusinessConfig
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
-        fields = ['id', 'role', 'phone', 'favorite_barber', 'is_active', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'role', 'phone', 'points', 'favorite_barber', 'is_active', 'created_at']
+        read_only_fields = ['id', 'created_at', 'points']
 
 
 class UserSerializer(serializers.ModelSerializer):

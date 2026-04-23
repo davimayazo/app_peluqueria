@@ -15,6 +15,9 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
 
+# Variable global para evitar migraciones repetitivas en cada request
+_migrations_checked = False
+
 class ProfileView(generics.RetrieveUpdateAPIView):
     """
     Obtiene o actualiza el perfil del usuario autenticado.
@@ -23,6 +26,19 @@ class ProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
+        global _migrations_checked
+        if not _migrations_checked:
+            from django.db import connection
+            try:
+                with connection.cursor() as cursor:
+                    try:
+                        cursor.execute("ALTER TABLE users_profile ADD COLUMN points INTEGER DEFAULT 0")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+            # No marcamos como True aquí para que BusinessConfigView también pueda chequear lo suyo
+            
         return self.request.user
 
 
@@ -56,24 +72,31 @@ class BusinessConfigView(generics.RetrieveUpdateAPIView):
         return [permissions.AllowAny()]
 
     def get_object(self):
-        # Auto-migrate missing columns directly in the view
-        from django.db import connection
-        try:
-            with connection.cursor() as cursor:
-                for col in [
-                    'show_appointments_widget',
-                    'show_revenue_widget',
-                    'show_services_widget',
-                    'show_staff_widget',
-                    'show_new_customers_widget',
-                    'show_agenda_widget'
-                ]:
+        global _migrations_checked
+        if not _migrations_checked:
+            from django.db import connection
+            try:
+                with connection.cursor() as cursor:
+                    for col in [
+                        'show_appointments_widget',
+                        'show_revenue_widget',
+                        'show_services_widget',
+                        'show_staff_widget',
+                        'show_new_customers_widget',
+                        'show_agenda_widget'
+                    ]:
+                        try:
+                            cursor.execute(f"ALTER TABLE users_businessconfig ADD COLUMN {col} bool DEFAULT 1")
+                        except Exception:
+                            pass
+                    
                     try:
-                        cursor.execute(f"ALTER TABLE users_businessconfig ADD COLUMN {col} bool DEFAULT 1")
+                        cursor.execute("ALTER TABLE users_businessconfig ADD COLUMN points_per_euro INTEGER DEFAULT 1")
                     except Exception:
                         pass
-        except Exception as e:
-            print("DB ALTER ERROR:", e)
+                _migrations_checked = True
+            except Exception as e:
+                print("DB ALTER ERROR:", e)
 
         # Asegurar que siempre exista el registro 1
         obj, _ = BusinessConfig.objects.get_or_create(id=1)
