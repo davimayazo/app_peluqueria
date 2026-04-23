@@ -8,7 +8,7 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { fetchAppointments, fetchServices, fetchBarbers } from '@/lib/api';
-import { Appointment, Barber } from '@/types';
+import { Appointment, Barber, Service } from '@/types';
 import { Button } from '@/components/ui/Button';
 
 export default function AdminDashboard() {
@@ -16,6 +16,7 @@ export default function AdminDashboard() {
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate] = useState(todayStr);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
   const { data: appointments, isLoading: loadingAppts } = useQuery<Appointment[]>({
     queryKey: ['admin_appointments'],
@@ -65,6 +66,18 @@ export default function AdminDashboard() {
       revenue,
       servicesCount,
       servicesSummary
+    };
+  }).sort((a: any, b: any) => b.revenue - a.revenue) || [];
+
+  // Calculate Per-Service Metrics
+  const serviceStats = services?.map((service: Service) => {
+    const appts = activeAppointments.filter(a => a.service === service.id);
+    const revenue = appts.reduce((acc, curr) => acc + parseFloat(curr.price_at_booking), 0);
+    const count = appts.length;
+    return {
+      ...service,
+      revenue,
+      count
     };
   }).sort((a: any, b: any) => b.revenue - a.revenue) || [];
 
@@ -151,11 +164,18 @@ export default function AdminDashboard() {
                     <h3 className="text-3xl font-bold text-primary">{totalRevenue.toFixed(2)} €</h3>
                   </CardContent>
                 </Card>
-                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group cursor-pointer hover:bg-surfaceLayer/80 transition-all" onClick={() => window.location.href='/admin/servicios'}>
+                <Card 
+                  className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                  onClick={() => setIsServiceModalOpen(true)}
+                >
                   <CardContent className="p-6 relative">
                     <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
-                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Servicios Ofrecidos</p>
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                      Servicios 
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </p>
                     <h3 className="text-3xl font-bold text-white">{services?.length || 0}</h3>
+                    <p className="text-[10px] text-textMuted mt-1">Pulsa para ver ingresos por servicio</p>
                   </CardContent>
                 </Card>
                 <Card 
@@ -287,10 +307,62 @@ export default function AdminDashboard() {
                     </Card>
                   ))}
                 </div>
+              </div>
+            </div>
+          )}
 
+          {/* SERVICE METRICS MODAL */}
+          {isServiceModalOpen && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-surfaceLayer border border-border w-full max-w-4xl rounded-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-8 border-b border-border/30 pb-6">
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-white">Rendimiento por Servicio</h2>
+                    <p className="text-primary font-medium">{rangeLabel}</p>
+                  </div>
+                  <button onClick={() => setIsServiceModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-textMuted"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  {serviceStats.map((service: any) => (
+                    <Card key={service.id} className="bg-background/40 border-border/40 overflow-hidden hover:border-primary/40 transition-all">
+                      <CardContent className="p-6 flex items-center justify-between">
+                        <div className="flex items-center gap-6">
+                          <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-white text-lg font-bold border border-white/10">
+                            {service.name.charAt(0)}
+                          </div>
+                          <div>
+                            <h4 className="text-lg font-bold text-white">{service.name}</h4>
+                            <p className="text-sm text-textMuted">{service.count} veces reservado</p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-12">
+                          <div className="text-right min-w-[100px]">
+                            <p className="text-[10px] uppercase text-textMuted font-bold tracking-widest mb-1">Precio Unit.</p>
+                            <p className="text-lg font-bold text-white">{parseFloat(service.price).toFixed(2)} €</p>
+                          </div>
+                          <div className="text-right min-w-[120px]">
+                            <p className="text-[10px] uppercase text-textMuted font-bold tracking-widest mb-1">Total Generado</p>
+                            <p className="text-2xl font-display font-bold text-primary">{service.revenue.toFixed(2)} €</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  
+                  {serviceStats.length === 0 && (
+                    <div className="py-20 text-center border-2 border-dashed border-border/30 rounded-3xl">
+                      <p className="text-textMuted">No hay datos de servicios para este periodo.</p>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="mt-10 pt-6 border-t border-border/30 text-center">
                   <p className="text-textMuted text-sm">
-                    Ingresos totales del staff en este periodo: <span className="text-primary font-bold">{totalRevenue.toFixed(2)} €</span>
+                    Ingresos totales de servicios en este periodo: <span className="text-primary font-bold">{totalRevenue.toFixed(2)} €</span>
                   </p>
                 </div>
               </div>
