@@ -290,6 +290,9 @@ export const updateBusinessConfig = async (configData: any) => {
     method: 'PATCH',
     body: JSON.stringify(configData),
   });
-  if (!res.ok) throw new Error('Error al actualizar la configuración');
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(JSON.stringify(errorBody) || 'Error al actualizar la configuración');
+  }
   return res.json();
 };

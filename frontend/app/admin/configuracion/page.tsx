@@ -21,6 +21,7 @@ export default function AdminConfiguracion() {
     show_agenda_widget: true,
   });
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { data: config, isLoading } = useQuery({ 
     queryKey: ['business_config'], 
@@ -49,9 +50,21 @@ export default function AdminConfiguracion() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['business_config'] });
       setSuccess(true);
+      setErrorMsg(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       setTimeout(() => setSuccess(false), 3000);
     },
-    onError: (err: any) => alert(err.message)
+    onError: (err: any) => {
+      console.error("Error saving config:", err);
+      let message = "Error al guardar la configuración.";
+      try {
+        const details = JSON.parse(err.message);
+        message += "\n\nDetalles:\n" + Object.entries(details).map(([k, v]) => `${k}: ${v}`).join('\n');
+      } catch (e) {
+        message += "\n" + err.message;
+      }
+      setErrorMsg(message);
+    }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -81,8 +94,13 @@ export default function AdminConfiguracion() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {success && (
-                <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg text-green-400 text-sm font-medium animate-in fade-in duration-300">
+                <div className="p-4 bg-green-500/10 border border-green-500/50 rounded-lg text-green-400 text-sm font-medium animate-in slide-in-from-top-2 duration-300">
                   ¡Configuración actualizada correctamente!
+                </div>
+              )}
+              {errorMsg && (
+                <div className="p-4 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm font-medium animate-in slide-in-from-top-2 duration-300 whitespace-pre-wrap select-all">
+                  {errorMsg}
                 </div>
               )}
 
@@ -139,23 +157,31 @@ export default function AdminConfiguracion() {
                       { id: 'show_staff_widget', label: 'Rendimiento del Staff', desc: 'Ingresos generados por cada barbero' },
                       { id: 'show_new_customers_widget', label: 'Clientes Nuevos', desc: 'Listado de usuarios registrados recientemente' },
                       { id: 'show_agenda_widget', label: 'Lista de Agenda', desc: 'Visualización detallada de citas del periodo' },
-                    ].map((widget) => (
-                      <div key={widget.id} className="flex items-center justify-between p-4 bg-surfaceLayer rounded-xl border border-border/50 group">
-                        <div className="flex flex-col">
-                          <span className="text-white font-medium group-hover:text-primary transition-colors">{widget.label}</span>
-                          <span className="text-xs text-textMuted">{widget.desc}</span>
+                    ].map((widget) => {
+                      const isActive = formData[widget.id as keyof typeof formData];
+                      return (
+                        <div key={widget.id} className="flex items-center justify-between p-4 bg-surfaceLayer rounded-xl border border-border/50 group hover:border-primary/30 transition-all">
+                          <div className="flex flex-col">
+                            <span className={`font-medium transition-colors ${isActive ? 'text-white' : 'text-textMuted'}`}>{widget.label}</span>
+                            <span className="text-xs text-textMuted">{widget.desc}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-green-500' : 'text-red-500'}`}>
+                              {isActive ? 'Activo' : 'Inactivo'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleWidget(widget.id as any)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none shadow-inner ${isActive ? 'bg-green-500/80 shadow-green-900/50' : 'bg-red-500/80 shadow-red-900/50'}`}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${isActive ? 'translate-x-6' : 'translate-x-1'}`}
+                              />
+                            </button>
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => toggleWidget(widget.id as any)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${formData[widget.id as keyof typeof formData] ? 'bg-primary' : 'bg-surfaceLayer border border-border'}`}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formData[widget.id as keyof typeof formData] ? 'translate-x-6' : 'translate-x-1'}`}
-                          />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>
