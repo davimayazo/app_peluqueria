@@ -20,6 +20,7 @@ export default function AdminConfiguracion() {
     show_staff_widget: true,
     show_new_customers_widget: true,
     show_agenda_widget: true,
+    show_products_widget: true,
     points_per_euro: 1,
     point_redemption_value: 0.01,
   });
@@ -45,6 +46,7 @@ export default function AdminConfiguracion() {
         show_staff_widget: config.show_staff_widget ?? true,
         show_new_customers_widget: config.show_new_customers_widget ?? true,
         show_agenda_widget: config.show_agenda_widget ?? true,
+        show_products_widget: config.show_products_widget ?? true,
         points_per_euro: config.points_per_euro || 1,
         point_redemption_value: config.point_redemption_value || 0.01,
       });
@@ -174,6 +176,7 @@ export default function AdminConfiguracion() {
                       { id: 'show_staff_widget', label: 'Rendimiento del Staff', desc: 'Ingresos generados por cada barbero' },
                       { id: 'show_new_customers_widget', label: 'Clientes Nuevos', desc: 'Listado de usuarios registrados recientemente' },
                       { id: 'show_agenda_widget', label: 'Lista de Agenda', desc: 'Visualización detallada de citas del periodo' },
+                      { id: 'show_products_widget', label: 'Ventas de Productos', desc: 'Resumen de ventas físicas y métricas de stock' },
                     ].map((widget) => {
                       const isActive = formData[widget.id as keyof typeof formData];
                       return (

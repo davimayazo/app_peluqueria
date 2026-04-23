@@ -83,7 +83,8 @@ class BusinessConfigView(generics.RetrieveUpdateAPIView):
                         'show_services_widget',
                         'show_staff_widget',
                         'show_new_customers_widget',
-                        'show_agenda_widget'
+                        'show_agenda_widget',
+                        'show_products_widget'
                     ]:
                         try:
                             cursor.execute(f"ALTER TABLE users_businessconfig ADD COLUMN {col} bool DEFAULT 1")

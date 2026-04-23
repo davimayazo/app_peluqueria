@@ -3,8 +3,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from .models import Product
-from .serializers import ProductSerializer
+from .models import Product, ProductSale
+from .serializers import ProductSerializer, ProductSaleSerializer
 from apps.users.models import BusinessConfig
 
 class ProductListView(generics.ListCreateAPIView):
@@ -28,6 +28,18 @@ class ProductListView(generics.ListCreateAPIView):
                         updated_at DATETIME
                     )
                 """)
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS products_productsale (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        product_id INTEGER NOT NULL,
+                        user_id INTEGER,
+                        quantity INTEGER DEFAULT 1,
+                        price_at_sale DECIMAL(8,2) NOT NULL,
+                        discount_applied DECIMAL(8,2) DEFAULT 0,
+                        created_at DATETIME,
+                        FOREIGN KEY (product_id) REFERENCES products_product (id)
+                    )
+                """)
         except Exception as e:
             print("DB CREATE ERROR:", e)
             
@@ -36,7 +48,7 @@ class ProductListView(generics.ListCreateAPIView):
     def get_permissions(self):
         if self.request.method == 'GET':
             return [permissions.AllowAny()]
-        return [permissions.IsAuthenticated()] # Admin check recommended
+        return [permissions.IsAuthenticated()]
 
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
@@ -64,17 +76,23 @@ class BuyProductView(APIView):
         
         discount_applied = 0
         if profile.points >= points_needed_for_full_price:
-            # Cubre todo el precio
             profile.points -= int(points_needed_for_full_price)
             discount_applied = float(product.price)
         else:
-            # Cubre solo una parte
             discount_applied = float(profile.points) * redemption_value
             profile.points = 0
             
         profile.save()
         product.stock -= 1
         product.save()
+
+        # REGISTRAR VENTA
+        ProductSale.objects.create(
+            product=product,
+            user=request.user,
+            price_at_sale=product.price,
+            discount_applied=discount_applied
+        )
         
         return Response({
             "message": "Compra realizada con éxito",
@@ -82,3 +100,8 @@ class BuyProductView(APIView):
             "remaining_points": profile.points,
             "new_stock": product.stock
         })
+
+class ProductSaleListView(generics.ListAPIView):
+    queryset = ProductSale.objects.all()
+    serializer_class = ProductSaleSerializer
+    permission_classes = [permissions.IsAuthenticated]

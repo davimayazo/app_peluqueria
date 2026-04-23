@@ -55,6 +55,7 @@ class BusinessConfig(models.Model):
     show_staff_widget = models.BooleanField(default=True)
     show_new_customers_widget = models.BooleanField(default=True)
     show_agenda_widget = models.BooleanField(default=True)
+    show_products_widget = models.BooleanField(default=True)
     points_per_euro = models.DecimalField(max_digits=5, decimal_places=2, default=1.0)
     point_redemption_value = models.DecimalField(max_digits=5, decimal_places=4, default=0.01) # 100 puntos = 1€
 

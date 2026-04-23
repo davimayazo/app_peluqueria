@@ -359,3 +359,9 @@ export const buyProduct = async (id: number): Promise<any> => {
   }
   return await res.json();
 };
+
+export const fetchProductSales = async (): Promise<any[]> => {
+  const res = await apiFetch('/products/sales/');
+  if (!res.ok) throw new Error('No se pudo cargar el historial de ventas');
+  return await res.json();
+};

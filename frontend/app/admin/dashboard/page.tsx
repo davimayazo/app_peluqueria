@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { fetchAppointments, fetchServices, fetchBarbers, fetchUsers, fetchBusinessConfig } from '@/lib/api';
+import { fetchAppointments, fetchServices, fetchBarbers, fetchUsers, fetchBusinessConfig, fetchProductSales, fetchProducts } from '@/lib/api';
 import { Appointment, Barber, Service, User } from '@/types';
 import { Button } from '@/components/ui/Button';
 
@@ -18,6 +18,8 @@ export default function AdminDashboard() {
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+  const { data: products } = useQuery({ queryKey: ['products'], queryFn: fetchProducts });
 
   const { data: appointments, isLoading: loadingAppts } = useQuery<Appointment[]>({
     queryKey: ['admin_appointments'],
@@ -28,6 +30,7 @@ export default function AdminDashboard() {
   const { data: barbers } = useQuery({ queryKey: ['barbers'], queryFn: fetchBarbers });
   const { data: allUsers } = useQuery({ queryKey: ['admin_users'], queryFn: fetchUsers });
   const { data: config } = useQuery({ queryKey: ['business_config'], queryFn: fetchBusinessConfig });
+  const { data: sales } = useQuery({ queryKey: ['product_sales'], queryFn: fetchProductSales });
 
   // Shortcuts
   const setRange = (type: 'today' | 'week' | 'month') => {
@@ -60,7 +63,8 @@ export default function AdminDashboard() {
   }) : [];
 
   // Calculate Per-Barber Metrics
-  const barberStats = Array.isArray(barbers) ? barbers.map((barber: Barber) => {
+  const barbersArray = Array.isArray(barbers) ? barbers : [];
+  const barberStats = barbersArray.map((barber: Barber) => {
     const appts = activeAppointments.filter(a => a.barber === barber.id);
     const revenue = appts.reduce((acc, curr) => acc + parseFloat(curr.price_at_booking), 0);
     const servicesCount = appts.length;
@@ -76,19 +80,52 @@ export default function AdminDashboard() {
       servicesCount,
       servicesSummary
     };
-  }).sort((a: any, b: any) => b.revenue - a.revenue) : [];
+  }).sort((a: any, b: any) => b.revenue - a.revenue);
 
   // Calculate Per-Service Metrics
-  const serviceStats = Array.isArray(services) ? services.map((service: Service) => {
+  const servicesArray = Array.isArray(services) ? services : [];
+  const serviceStats = servicesArray.map((service: Service) => {
     const appts = activeAppointments.filter(a => a.service === service.id);
-    const revenue = appts.reduce((acc, curr) => acc + parseFloat(curr.price_at_booking), 0);
+    const revenue = appts.reduce((acc: number, curr: any) => acc + parseFloat(curr.price_at_booking), 0);
     const count = appts.length;
     return {
       ...service,
       revenue,
       count
     };
-  }).sort((a: any, b: any) => b.revenue - a.revenue) : [];
+  }).sort((a: any, b: any) => b.revenue - a.revenue);
+
+  // Calculate Product Metrics
+  const productsArray = Array.isArray(products) ? products : ((products as any)?.results || []);
+  const salesArray = Array.isArray(sales) ? sales : ((sales as any)?.results || []);
+
+  const productStats = productsArray.map((product: any) => {
+    const productSales = salesArray.filter((s: any) => {
+      // Comparación de IDs
+      const saleProdId = Number(s.product?.id || s.product);
+      const currentProdId = Number(product.id);
+      if (saleProdId !== currentProdId) return false;
+      
+      // Comparación de fecha ultra-flexible
+      const dateStr = String(s.created_at);
+      return dateStr.includes(startDate) || dateStr.includes(endDate) || (startDate <= dateStr.substring(0, 10) && dateStr.substring(0, 10) <= endDate);
+    });
+
+    const unitsSold = productSales.length;
+    const revenue = productSales.reduce((acc: number, curr: any) => {
+      const price = parseFloat(String(curr.price_at_sale)) || 0;
+      const discount = parseFloat(String(curr.discount_applied)) || 0;
+      return acc + (price - discount);
+    }, 0);
+
+    return {
+      ...product,
+      unitsSold,
+      revenue
+    };
+  }).sort((a: any, b: any) => b.revenue - a.revenue);
+
+  const productRevenue = productStats.reduce((acc: number, curr: any) => acc + curr.revenue, 0);
 
   const isSingleDay = startDate === endDate;
   const rangeLabel = isSingleDay 
@@ -102,6 +139,7 @@ export default function AdminDashboard() {
   const showStaff = config?.show_staff_widget ?? true;
   const showNewCustomers = config?.show_new_customers_widget ?? true;
   const showAgenda = config?.show_agenda_widget ?? true;
+  const showProducts = config?.show_products_widget ?? true;
 
   // Calculate dynamic grid columns
   const activeWidgetsCount = [showAppointments, showRevenue, showServices, showStaff, showNewCustomers].filter(Boolean).length;
@@ -190,8 +228,24 @@ export default function AdminDashboard() {
                   <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
                     <CardContent className="p-6 relative">
                       <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
-                      <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Ingresos Estimados</p>
+                      <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Ingresos Citas</p>
                       <h3 className="text-3xl font-bold text-primary">{totalRevenue.toFixed(2)} €</h3>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {showProducts && (
+                  <Card 
+                    className="bg-surfaceLayer border border-primary/20 shadow-xl overflow-hidden group cursor-pointer hover:border-primary/50 hover:bg-surfaceLayer/80 transition-all"
+                    onClick={() => setIsProductModalOpen(true)}
+                  >
+                    <CardContent className="p-6 relative">
+                      <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                      <p className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                        Ventas Productos
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      </p>
+                      <h3 className="text-3xl font-bold text-white">{productRevenue.toFixed(2)} €</h3>
                     </CardContent>
                   </Card>
                 )}
@@ -411,7 +465,59 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* NEW CUSTOMERS MODAL */}
+          {/* PRODUCT PERFORMANCE MODAL */}
+          {isProductModalOpen && (
+            <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="bg-surfaceLayer border border-border w-full max-w-4xl rounded-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-8 border-b border-border/30 pb-6">
+                  <div>
+                    <h2 className="text-3xl font-display font-bold text-white">Ventas de Productos</h2>
+                    <p className="text-primary font-medium">{rangeLabel}</p>
+                  </div>
+                  <button onClick={() => setIsProductModalOpen(false)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-textMuted"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {productStats.map((prod: any) => (
+                    <Card key={prod.id} className="bg-background/40 border-border/40 overflow-hidden hover:border-primary/40 transition-all">
+                      <CardContent className="p-6">
+                        <div className="flex items-center gap-4 mb-6">
+                          <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary overflow-hidden border border-primary/20">
+                            {prod.image_url ? (
+                              <img src={prod.image_url} alt={prod.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-xl font-bold">{prod.name.charAt(0)}</span>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="text-xl font-bold text-white">{prod.name}</h4>
+                            <p className="text-sm text-textMuted">{prod.unitsSold} unidades vendidas</p>
+                          </div>
+                          <div className="ml-auto text-right">
+                            <p className="text-xs uppercase text-textMuted font-bold tracking-widest mb-1">Total</p>
+                            <p className="text-2xl font-display font-bold text-primary">{prod.revenue.toFixed(2)} €</p>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center pt-4 border-t border-border/10">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] uppercase text-textMuted font-bold tracking-widest">Stock Disponible</span>
+                            <span className={`text-lg font-bold ${prod.stock < 5 ? 'text-red-400' : 'text-white'}`}>{prod.stock} uds</span>
+                          </div>
+                          <div className="flex flex-col text-right">
+                            <span className="text-[10px] uppercase text-textMuted font-bold tracking-widest">Precio Unit.</span>
+                            <span className="text-lg font-bold text-white">{parseFloat(prod.price).toFixed(2)} €</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           {isUserModalOpen && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 backdrop-blur-md animate-in fade-in duration-300">
               <div className="bg-surfaceLayer border border-border w-full max-w-4xl rounded-[2.5rem] p-8 shadow-2xl max-h-[85vh] overflow-y-auto">
