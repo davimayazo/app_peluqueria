@@ -280,6 +280,7 @@ export default function AdminDashboard() {
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                                   appt.status === 'completada' ? 'bg-green-500/10 text-green-500' :
                                   appt.status === 'cancelada' ? 'bg-red-500/10 text-red-500' :
+                                  appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400' :
                                   'bg-blue-500/10 text-blue-400'
                                 }`}>
                                   {appt.status}

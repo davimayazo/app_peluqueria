@@ -24,7 +24,8 @@ export default function AdminClientes() {
     password: '',
     first_name: '',
     last_name: '',
-    phone: ''
+    phone: '',
+    points: 0
   });
 
   // Queries
@@ -88,7 +89,8 @@ export default function AdminClientes() {
         password: '',
         first_name: user.first_name,
         last_name: user.last_name,
-        phone: user.profile?.phone || ''
+        phone: user.profile?.phone || '',
+        points: user.profile?.points || 0
       });
     } else {
       setSelectedUser(null);
@@ -98,7 +100,8 @@ export default function AdminClientes() {
         password: '',
         first_name: '',
         last_name: '',
-        phone: ''
+        phone: '',
+        points: 0
       });
     }
     setIsModalOpen(true);
@@ -117,7 +120,14 @@ export default function AdminClientes() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedUser) {
-      const { password, ...updateData } = formData;
+      const { password, phone, points, ...userData } = formData;
+      const updateData = {
+        ...userData,
+        profile: {
+          phone,
+          points
+        }
+      };
       updateMutation.mutate({ id: selectedUser.id, data: updateData });
     } else {
       createMutation.mutate({ ...formData, password2: formData.password });
@@ -182,6 +192,7 @@ export default function AdminClientes() {
                           <th className="p-4 font-medium uppercase tracking-wider">Nombre Completo</th>
                           <th className="p-4 font-medium uppercase tracking-wider">Usuario</th>
                           <th className="p-4 font-medium uppercase tracking-wider">Email</th>
+                          <th className="p-4 font-medium uppercase tracking-wider">Puntos</th>
                           <th className="p-4 font-medium uppercase tracking-wider text-right">Acciones</th>
                         </tr>
                       </thead>
@@ -191,6 +202,7 @@ export default function AdminClientes() {
                             <td className="p-4 font-medium text-white">{user.full_name || `${user.first_name} ${user.last_name}`}</td>
                             <td className="p-4 text-textMuted">{user.username}</td>
                             <td className="p-4 text-textMuted">{user.email}</td>
+                            <td className="p-4 font-bold text-primary">{user.profile?.points || 0}</td>
                             <td className="p-4 text-right flex justify-end gap-2">
                               <button 
                                 onClick={() => openHistoryModal(user)}
@@ -311,9 +323,15 @@ export default function AdminClientes() {
                   <label className="block text-sm font-medium text-textMuted mb-1">Email</label>
                   <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-textMuted mb-1">Teléfono</label>
-                  <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-textMuted mb-1">Teléfono</label>
+                    <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-textMuted mb-1 font-bold text-primary italic">Puntos de Fidelización</label>
+                    <input type="number" value={formData.points} onChange={(e) => setFormData({...formData, points: parseInt(e.target.value) || 0})} className="w-full bg-background border border-primary/30 rounded-lg px-4 py-2 text-primary font-bold focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  </div>
                 </div>
                 {!selectedUser && (
                   <div>

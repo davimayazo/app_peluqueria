@@ -4,6 +4,7 @@ export interface Profile {
   id: number;
   role: Role;
   phone: string;
+  points: number;
   favorite_barber: number | null;
   is_active: boolean;
 }

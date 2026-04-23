@@ -8,7 +8,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['id', 'role', 'phone', 'points', 'favorite_barber', 'is_active', 'created_at']
-        read_only_fields = ['id', 'created_at', 'points']
+        read_only_fields = ['id', 'created_at']
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -29,6 +29,12 @@ class UserSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         profile_data = validated_data.pop('profile', None)
+        request = self.context.get('request')
+        
+        # Verificar si el que pide el cambio es admin
+        is_admin = False
+        if request and hasattr(request.user, 'profile'):
+            is_admin = request.user.profile.role == 'admin'
         
         # Actualizar datos de User
         instance.first_name = validated_data.get('first_name', instance.first_name)
@@ -36,10 +42,15 @@ class UserSerializer(serializers.ModelSerializer):
         instance.email = validated_data.get('email', instance.email)
         instance.save()
         
-        # Actualizar datos de Profile (teléfono)
+        # Actualizar datos de Profile
         if profile_data:
             profile = instance.profile
             profile.phone = profile_data.get('phone', profile.phone)
+            
+            # Solo el admin puede cambiar los puntos manualmente
+            if is_admin and 'points' in profile_data:
+                profile.points = profile_data.get('points', profile.points)
+                
             profile.save()
             
         return instance
