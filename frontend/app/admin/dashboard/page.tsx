@@ -278,10 +278,11 @@ export default function AdminDashboard() {
                               </div>
                               <div className="flex flex-col items-end gap-1">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                  appt.status === 'completada' ? 'bg-green-500/10 text-green-500' :
-                                  appt.status === 'cancelada' ? 'bg-red-500/10 text-red-500' :
-                                  appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400' :
-                                  'bg-blue-500/10 text-blue-400'
+                                  appt.status === 'confirmada' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                                  appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                                  appt.status === 'completada' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
+                                  appt.status === 'cancelada' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+                                  'bg-gray-500/10 text-gray-400 border border-gray-500/20'
                                 }`}>
                                   {appt.status}
                                 </span>
