@@ -22,6 +22,9 @@ export default function Sidebar() {
         <Link href="/admin/barberos" className="flex items-center px-4 py-3 text-gray-300 hover:bg-barber-dark hover:text-white rounded-lg transition-colors group">
           <span className="font-medium group-hover:translate-x-1 transition-transform">Barberos</span>
         </Link>
+        <Link href="/admin/productos" className="flex items-center px-4 py-3 text-gray-300 hover:bg-barber-dark hover:text-white rounded-lg transition-colors group">
+          <span className="font-medium group-hover:translate-x-1 transition-transform text-primary">Productos (Inventario)</span>
+        </Link>
         <Link href="/admin/configuracion" className="flex items-center px-4 py-3 text-gray-300 hover:bg-barber-dark hover:text-white rounded-lg transition-colors group">
           <span className="font-medium group-hover:translate-x-1 transition-transform">Configuración</span>
         </Link>

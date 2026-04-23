@@ -21,6 +21,7 @@ export default function AdminConfiguracion() {
     show_new_customers_widget: true,
     show_agenda_widget: true,
     points_per_euro: 1,
+    point_redemption_value: 0.01,
   });
   const [success, setSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -45,6 +46,7 @@ export default function AdminConfiguracion() {
         show_new_customers_widget: config.show_new_customers_widget ?? true,
         show_agenda_widget: config.show_agenda_widget ?? true,
         points_per_euro: config.points_per_euro || 1,
+        point_redemption_value: config.point_redemption_value || 0.01,
       });
     }
   }, [config]);
@@ -221,6 +223,27 @@ export default function AdminConfiguracion() {
                           step="0.1"
                           value={formData.points_per_euro}
                           onChange={(e) => setFormData({...formData, points_per_euro: parseFloat(e.target.value) || 0})}
+                          className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-6 p-4 bg-primary/5 border border-primary/20 rounded-2xl">
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-white">Valor de Canje (1 Punto = €)</h4>
+                      <p className="text-sm text-textMuted">Valor en euros de cada punto. Por defecto 0.01 (100 pts = 1€).</p>
+                    </div>
+                    <div className="w-32">
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          step="0.0001"
+                          value={formData.point_redemption_value}
+                          onChange={(e) => setFormData({...formData, point_redemption_value: parseFloat(e.target.value) || 0})}
                           className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
                         />
                       </div>

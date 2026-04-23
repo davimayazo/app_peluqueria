@@ -77,11 +77,11 @@ export default function AdminAgenda() {
     onError: (err: any) => alert(err.message)
   });
 
-  const filteredAppointments = appointments?.filter((appt: Appointment) => {
+  const filteredAppointments = Array.isArray(appointments) ? appointments.filter((appt: Appointment) => {
     const matchesDate = isSameDay(parseISO(appt.start_datetime), parseISO(selectedDate));
     const matchesStatus = filterStatus === 'todos' || appt.status === filterStatus;
     return matchesDate && matchesStatus;
-  }) || [];
+  }) : [];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

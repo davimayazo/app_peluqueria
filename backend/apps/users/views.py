@@ -94,6 +94,11 @@ class BusinessConfigView(generics.RetrieveUpdateAPIView):
                         cursor.execute("ALTER TABLE users_businessconfig ADD COLUMN points_per_euro DECIMAL(5,2) DEFAULT 1.0")
                     except Exception:
                         pass
+
+                    try:
+                        cursor.execute("ALTER TABLE users_businessconfig ADD COLUMN point_redemption_value DECIMAL(5,4) DEFAULT 0.01")
+                    except Exception:
+                        pass
                 _migrations_checked = True
             except Exception as e:
                 print("DB ALTER ERROR:", e)

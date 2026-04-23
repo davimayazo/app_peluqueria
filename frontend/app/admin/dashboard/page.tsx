@@ -45,22 +45,22 @@ export default function AdminDashboard() {
   };
 
   // Calculate Metrics based on Range
-  const rangeAppointments = appointments?.filter((a: Appointment) => {
+  const rangeAppointments = Array.isArray(appointments) ? appointments.filter((a: Appointment) => {
     const apptDate = format(parseISO(a.start_datetime), 'yyyy-MM-dd');
     return apptDate >= startDate && apptDate <= endDate;
-  }) || [];
+  }) : [];
 
   const activeAppointments = rangeAppointments.filter((a: Appointment) => a.status === 'confirmada' || a.status === 'completada');
   const totalRevenue = activeAppointments.reduce((acc: number, curr: Appointment) => acc + parseFloat(curr.price_at_booking), 0);
   
-  const newCustomers = allUsers?.filter((u: User) => {
+  const newCustomers = Array.isArray(allUsers) ? allUsers.filter((u: User) => {
     if (u.profile?.role !== 'cliente') return false;
     const joinDate = format(parseISO(u.date_joined), 'yyyy-MM-dd');
     return joinDate >= startDate && joinDate <= endDate;
-  }) || [];
+  }) : [];
 
   // Calculate Per-Barber Metrics
-  const barberStats = barbers?.map((barber: Barber) => {
+  const barberStats = Array.isArray(barbers) ? barbers.map((barber: Barber) => {
     const appts = activeAppointments.filter(a => a.barber === barber.id);
     const revenue = appts.reduce((acc, curr) => acc + parseFloat(curr.price_at_booking), 0);
     const servicesCount = appts.length;
@@ -76,10 +76,10 @@ export default function AdminDashboard() {
       servicesCount,
       servicesSummary
     };
-  }).sort((a: any, b: any) => b.revenue - a.revenue) || [];
+  }).sort((a: any, b: any) => b.revenue - a.revenue) : [];
 
   // Calculate Per-Service Metrics
-  const serviceStats = services?.map((service: Service) => {
+  const serviceStats = Array.isArray(services) ? services.map((service: Service) => {
     const appts = activeAppointments.filter(a => a.service === service.id);
     const revenue = appts.reduce((acc, curr) => acc + parseFloat(curr.price_at_booking), 0);
     const count = appts.length;
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
       revenue,
       count
     };
-  }).sort((a: any, b: any) => b.revenue - a.revenue) || [];
+  }).sort((a: any, b: any) => b.revenue - a.revenue) : [];
 
   const isSingleDay = startDate === endDate;
   const rangeLabel = isSingleDay 

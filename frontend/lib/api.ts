@@ -223,7 +223,8 @@ export const fetchAppointments = async (): Promise<Appointment[]> => {
   const res = await apiFetch('/appointments/');
   if (!res.ok) throw new Error('Failed to fetch appointments');
   const data = await res.json();
-  return data.results || data;
+  const result = data.results || data;
+  return Array.isArray(result) ? result : [];
 };
 
 export const loginUser = async (credentials: LoginCredentials) => {
@@ -285,6 +286,41 @@ export const deleteUser = async (id: number) => {
     method: 'DELETE',
   });
   if (!res.ok) throw new Error('Error al eliminar el usuario');
+  return true;
+};
+
+// --- PRODUCTOS ---
+
+export const fetchProducts = async () => {
+  const res = await apiFetch('/products/');
+  if (!res.ok) throw new Error('Failed to fetch products');
+  const data = await res.json();
+  return data.results || data;
+};
+
+export const createProduct = async (productData: any) => {
+  const res = await apiFetch('/products/', {
+    method: 'POST',
+    body: JSON.stringify(productData),
+  });
+  if (!res.ok) throw new Error('Error al crear el producto');
+  return res.json();
+};
+
+export const updateProduct = async (id: number, productData: any) => {
+  const res = await apiFetch(`/products/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(productData),
+  });
+  if (!res.ok) throw new Error('Error al actualizar el producto');
+  return res.json();
+};
+
+export const deleteProduct = async (id: number) => {
+  const res = await apiFetch(`/products/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Error al eliminar el producto');
   return true;
 };
 

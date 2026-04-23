@@ -24,6 +24,11 @@ export default function Navbar() {
               {businessName}
             </Link>
           </div>
+          <div className="flex items-center space-x-6 ml-8">
+            {!hasRole('admin') && (
+              <Link href="/productos" className="text-textMuted hover:text-white text-sm font-medium transition-colors">Productos</Link>
+            )}
+          </div>
           <div className="hidden md:block">
             <div className="ml-10 flex items-center space-x-4">
               {!isAuthenticated ? (

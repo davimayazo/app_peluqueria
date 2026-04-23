@@ -51,17 +51,17 @@ export default function ClienteDashboard() {
     }
   };
 
-  const upcomingAppts = appointments?.filter((a: Appointment) => 
+  const upcomingAppts = Array.isArray(appointments) ? appointments.filter((a: Appointment) => 
     (isFuture(parseISO(a.start_datetime)) || isToday(parseISO(a.start_datetime))) && 
     a.status !== 'cancelada' && 
     a.status !== 'completada'
-  ).sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)) || [];
+  ).sort((a: Appointment, b: Appointment) => a.start_datetime.localeCompare(b.start_datetime)) : [];
 
-  const pastAppts = appointments?.filter((a: Appointment) => 
+  const pastAppts = Array.isArray(appointments) ? appointments.filter((a: Appointment) => 
     isPast(parseISO(a.start_datetime)) || 
     a.status === 'cancelada' || 
     a.status === 'completada'
-  ).sort((a: Appointment, b: Appointment) => b.start_datetime.localeCompare(a.start_datetime)) || [];
+  ).sort((a: Appointment, b: Appointment) => b.start_datetime.localeCompare(a.start_datetime)) : [];
 
   function isToday(date: Date) {
     const today = new Date();
