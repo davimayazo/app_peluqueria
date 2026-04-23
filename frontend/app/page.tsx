@@ -49,27 +49,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* FEATURES / PROCESS SECTION */}
-        <section className="py-24 bg-surfaceLayer/30 border-y border-border/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                { title: "Elige tu Servicio", desc: "Desde cortes clásicos hasta rituales completos de afeitado con toalla caliente." },
-                { title: "Selecciona a tu Barbero", desc: "Encuentra al profesional que mejor se adapte a tu estilo personal." },
-                { title: "Reserva en Segundos", desc: "Confirma tu cita al instante de forma totalmente digital y sin llamadas." }
-              ].map((item, idx) => (
-                <div key={idx} className="p-8 rounded-3xl bg-surface border border-border flex flex-col items-center text-center hover:border-primary/50 transition-all hover:shadow-2xl hover:shadow-primary/5 group">
-                  <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold text-xl mb-6 border border-primary/20 group-hover:bg-primary group-hover:text-black transition-all">
-                    {idx + 1}
-                  </div>
-                  <h3 className="text-xl font-semibold text-white mb-3">{item.title}</h3>
-                  <p className="text-textMuted leading-relaxed">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* CONTACT INFO SECTION */}
         <section className="py-24 bg-background">
           <div className="max-w-7xl mx-auto px-4 text-center">
