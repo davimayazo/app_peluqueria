@@ -14,8 +14,7 @@ def grant_points_on_completion(sender, instance, **kwargs):
                 config = BusinessConfig.objects.first()
                 points_per_euro = config.points_per_euro if config else 1
                 
-                # Calcular puntos (precio * ratio)
-                # Usamos price_at_booking ya que es el snapshot del precio
+                # Calcular puntos (precio * ratio) y redondear hacia abajo (truncar)
                 earned_points = int(instance.price_at_booking * points_per_euro)
                 
                 # Sumar al perfil del cliente

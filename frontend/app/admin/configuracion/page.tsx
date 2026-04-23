@@ -218,8 +218,9 @@ export default function AdminConfiguracion() {
                       <div className="relative">
                         <input 
                           type="number" 
+                          step="0.1"
                           value={formData.points_per_euro}
-                          onChange={(e) => setFormData({...formData, points_per_euro: parseInt(e.target.value) || 0})}
+                          onChange={(e) => setFormData({...formData, points_per_euro: parseFloat(e.target.value) || 0})}
                           className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
                         />
                       </div>

@@ -91,7 +91,7 @@ class BusinessConfigView(generics.RetrieveUpdateAPIView):
                             pass
                     
                     try:
-                        cursor.execute("ALTER TABLE users_businessconfig ADD COLUMN points_per_euro INTEGER DEFAULT 1")
+                        cursor.execute("ALTER TABLE users_businessconfig ADD COLUMN points_per_euro DECIMAL(5,2) DEFAULT 1.0")
                     except Exception:
                         pass
                 _migrations_checked = True
