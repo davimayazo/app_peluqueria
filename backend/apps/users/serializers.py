@@ -13,7 +13,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     """Serializer completo del usuario con su perfil."""
-    profile = ProfileSerializer(read_only=True)
+    profile = ProfileSerializer()
     full_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -22,9 +22,27 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name',
             'full_name', 'date_joined', 'profile',
         ]
+        read_only_fields = ['id', 'username', 'date_joined']
 
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
+
+    def update(self, instance, validated_data):
+        profile_data = validated_data.pop('profile', None)
+        
+        # Actualizar datos de User
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.email = validated_data.get('email', instance.email)
+        instance.save()
+        
+        # Actualizar datos de Profile (teléfono)
+        if profile_data:
+            profile = instance.profile
+            profile.phone = profile_data.get('phone', profile.phone)
+            profile.save()
+            
+        return instance
 
 
 class RegisterSerializer(serializers.ModelSerializer):

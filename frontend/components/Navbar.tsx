@@ -47,9 +47,9 @@ export default function Navbar() {
                       </Link>
                     </>
                   )}
-                  <span className="text-sm text-textMuted border-l border-border pl-4 ml-2">
+                  <Link href="/perfil" className="text-sm text-textMuted border-l border-border pl-4 ml-2 hover:text-primary transition-colors cursor-pointer">
                     {user?.first_name || user?.username}
-                  </span>
+                  </Link>
                   <button onClick={logout} className="text-textMuted hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                     Salir
                   </button>

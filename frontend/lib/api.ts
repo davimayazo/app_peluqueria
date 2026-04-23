@@ -255,6 +255,15 @@ export const fetchProfile = async () => {
   return res.json();
 };
 
+export const updateProfile = async (userData: any) => {
+  const res = await apiFetch('/users/me/', {
+    method: 'PATCH',
+    body: JSON.stringify(userData),
+  });
+  if (!res.ok) throw new Error('Error al actualizar el perfil');
+  return res.json();
+};
+
 export const fetchUsers = async () => {
   const res = await apiFetch('/admin/users/');
   if (!res.ok) throw new Error('Failed to fetch users');
