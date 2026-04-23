@@ -74,6 +74,7 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
   const res = await fetch(`${API_URL}${endpoint}`, {
     ...options,
     headers,
+    cache: 'no-store', // Evitar caché del navegador para datos sensibles
   });
 
   // Si no es 401 o no había token, devolver la respuesta directamente
@@ -89,7 +90,11 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
         resolve: async (newToken: string) => {
           headers['Authorization'] = `Bearer ${newToken}`;
           try {
-            const retryRes = await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+            const retryRes = await fetch(`${API_URL}${endpoint}`, { 
+              ...options, 
+              headers,
+              cache: 'no-store'
+            });
             resolve(retryRes);
           } catch (err) {
             reject(err);
@@ -109,7 +114,11 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
     // Reintentar la petición original con el nuevo token
     headers['Authorization'] = `Bearer ${newToken}`;
-    return await fetch(`${API_URL}${endpoint}`, { ...options, headers });
+    return await fetch(`${API_URL}${endpoint}`, { 
+      ...options, 
+      headers,
+      cache: 'no-store'
+    });
   } catch (error) {
     processQueue(error as Error, null);
     throw error;

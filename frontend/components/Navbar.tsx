@@ -1,17 +1,27 @@
 "use client";
 
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/store/useAuth';
 import { Button } from '@/components/ui/Button';
 import { fetchBusinessConfig } from '@/lib/api';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
   const { isAuthenticated, user, logout, hasRole } = useAuth();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
   const { data: config } = useQuery({ 
     queryKey: ['business_config'], 
     queryFn: fetchBusinessConfig 
   });
+
+  const handleLogout = () => {
+    logout();
+    queryClient.removeQueries(); 
+    window.location.href = '/'; 
+  };
 
   const businessName = config?.name || 'BarberBook';
 
@@ -55,7 +65,7 @@ export default function Navbar() {
                   <Link href="/perfil" className="text-sm text-textMuted border-l border-border pl-4 ml-2 hover:text-primary transition-colors cursor-pointer">
                     {user?.first_name || user?.username}
                   </Link>
-                  <button onClick={logout} className="text-textMuted hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                  <button onClick={handleLogout} className="text-textMuted hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
                     Salir
                   </button>
                 </>

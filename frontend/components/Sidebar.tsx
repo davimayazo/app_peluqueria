@@ -1,6 +1,20 @@
+"use client";
 import Link from 'next/link';
+import { useAuth } from '@/store/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
+  const { logout } = useAuth();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    logout();
+    queryClient.removeQueries();
+    window.location.href = '/';
+  };
+
   return (
     <div className="w-64 bg-[#111] border-r border-gray-800 h-screen flex flex-col hidden md:flex sticky top-0">
       <div className="h-16 flex items-center px-6 border-b border-gray-800">
@@ -30,9 +44,12 @@ export default function Sidebar() {
         </Link>
       </nav>
       <div className="p-4 border-t border-gray-800">
-        <Link href="/login" className="flex items-center px-4 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="w-full flex items-center px-4 py-2 text-red-400 hover:bg-red-500/10 hover:text-red-300 rounded-lg transition-colors"
+        >
           <span>Cerrar Sesión</span>
-        </Link>
+        </button>
       </div>
     </div>
   );

@@ -31,12 +31,15 @@ export const useAuth = create<AuthState>()(
         isAuthenticated: true 
       }),
 
-      logout: () => set({ 
-        user: null, 
-        accessToken: null, 
-        refreshToken: null, 
-        isAuthenticated: false 
-      }),
+      logout: () => {
+        localStorage.removeItem('auth-storage'); // Limpieza manual drástica
+        set({ 
+          user: null, 
+          accessToken: null, 
+          refreshToken: null, 
+          isAuthenticated: false 
+        });
+      },
 
       updateUser: (user) => set({ user }),
 
