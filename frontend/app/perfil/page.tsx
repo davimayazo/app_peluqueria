@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -9,12 +10,21 @@ import { fetchProfile, updateProfile } from '@/lib/api';
 import { useAuth } from '@/store/useAuth';
 
 export default function ProfilePage() {
+  const router = useRouter();
   const queryClient = useQueryClient();
-  const { user: authUser, updateUser } = useAuth();
+  const { user: authUser, updateUser, isAuthenticated } = useAuth();
+
+  // Redirigir si no está autenticado
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/');
+    }
+  }, [isAuthenticated, router]);
   
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', authUser?.id],
     queryFn: fetchProfile,
+    enabled: !!isAuthenticated,
   });
 
   const [formData, setFormData] = useState({
