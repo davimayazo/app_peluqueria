@@ -1,6 +1,7 @@
 "use client";
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, parseISO, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 import Navbar from '@/components/Navbar';
@@ -8,10 +9,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { fetchAppointments, fetchServices, fetchBarbers } from '@/lib/api';
 import { Appointment } from '@/types';
-import Link from 'next/link';
+import { Button } from '@/components/ui/Button';
 
 export default function AdminDashboard() {
-  const { data: appointments, isLoading: loadingAppts } = useQuery({
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const [startDate, setStartDate] = useState(todayStr);
+  const [endDate, setEndDate] = useState(todayStr);
+
+  const { data: appointments, isLoading: loadingAppts } = useQuery<Appointment[]>({
     queryKey: ['admin_appointments'],
     queryFn: fetchAppointments
   });
@@ -19,50 +24,124 @@ export default function AdminDashboard() {
   const { data: services } = useQuery({ queryKey: ['services'], queryFn: fetchServices });
   const { data: barbers } = useQuery({ queryKey: ['barbers'], queryFn: fetchBarbers });
 
-  // Calculate Metrics
-  const todayAppointments = appointments?.filter((a: Appointment) => isToday(parseISO(a.start_datetime))) || [];
-  const activeAppointments = appointments?.filter((a: Appointment) => a.status === 'confirmada' || a.status === 'completada') || [];
+  // Shortcuts
+  const setRange = (type: 'today' | 'week' | 'month') => {
+    const now = new Date();
+    if (type === 'today') {
+      setStartDate(todayStr);
+      setEndDate(todayStr);
+    } else if (type === 'week') {
+      setStartDate(format(startOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+      setEndDate(format(endOfWeek(now, { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+    } else if (type === 'month') {
+      setStartDate(format(startOfMonth(now), 'yyyy-MM-dd'));
+      setEndDate(format(endOfMonth(now), 'yyyy-MM-dd'));
+    }
+  };
+
+  // Calculate Metrics based on Range
+  const rangeAppointments = appointments?.filter((a: Appointment) => {
+    const apptDate = format(parseISO(a.start_datetime), 'yyyy-MM-dd');
+    return apptDate >= startDate && apptDate <= endDate;
+  }) || [];
+
+  const activeAppointments = rangeAppointments.filter((a: Appointment) => a.status === 'confirmada' || a.status === 'completada');
   const totalRevenue = activeAppointments.reduce((acc: number, curr: Appointment) => acc + parseFloat(curr.price_at_booking), 0);
   
+  const isSingleDay = startDate === endDate;
+  const rangeLabel = isSingleDay 
+    ? (startDate === todayStr ? 'Hoy' : format(parseISO(startDate), "d 'de' MMMM", { locale: es }))
+    : `${format(parseISO(startDate), "d MMM", { locale: es })} - ${format(parseISO(endDate), "d MMM", { locale: es })}`;
+
   return (
     <ProtectedRoute allowedRoles={['admin']}>
       <div className="min-h-screen bg-background text-textMain flex flex-col">
         <Navbar />
         
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
-          <div className="mb-8 border-b border-border pb-4">
-            <h1 className="text-3xl font-display font-bold text-primary mb-2">Panel de Administración</h1>
-            <p className="text-textMuted">Gestión general de BarberBook</p>
+          <div className="mb-8 border-b border-border pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-primary mb-1">Panel de Control</h1>
+              <p className="text-textMuted">Análisis de rendimiento y agenda</p>
+            </div>
+
+            {/* DATE FILTER UI */}
+            <div className="bg-surfaceLayer p-4 rounded-2xl border border-border/50 flex flex-col gap-4 w-full md:w-auto">
+              <div className="flex flex-wrap gap-2">
+                <button 
+                  onClick={() => setRange('today')}
+                  className={`px-3 py-1 text-xs rounded-full border transition-all ${startDate === todayStr && endDate === todayStr ? 'bg-primary text-black border-primary' : 'border-border text-textMuted hover:border-primary/50'}`}
+                >
+                  Hoy
+                </button>
+                <button 
+                  onClick={() => setRange('week')}
+                  className={`px-3 py-1 text-xs rounded-full border transition-all ${startDate === format(startOfWeek(new Date(), { weekStartsOn: 1 }), 'yyyy-MM-dd') ? 'bg-primary text-black border-primary' : 'border-border text-textMuted hover:border-primary/50'}`}
+                >
+                  Esta Semana
+                </button>
+                <button 
+                  onClick={() => setRange('month')}
+                  className={`px-3 py-1 text-xs rounded-full border transition-all ${startDate === format(startOfMonth(new Date()), 'yyyy-MM-dd') ? 'bg-primary text-black border-primary' : 'border-border text-textMuted hover:border-primary/50'}`}
+                >
+                  Este Mes
+                </button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase text-textMuted font-bold mb-1 ml-1">Desde</span>
+                  <input 
+                    type="date" 
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] uppercase text-textMuted font-bold mb-1 ml-1">Hasta</span>
+                  <input 
+                    type="date" 
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {loadingAppts ? (
             <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div></div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-8 animate-in fade-in duration-500">
               
               {/* METRICS ROW */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-surfaceLayer">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-textMuted mb-2">Citas Hoy</p>
-                    <h3 className="text-3xl font-bold text-white">{todayAppointments.length}</h3>
+                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                  <CardContent className="p-6 relative">
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Citas del Periodo</p>
+                    <h3 className="text-3xl font-bold text-white">{rangeAppointments.length}</h3>
                   </CardContent>
                 </Card>
-                <Card className="bg-surfaceLayer">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-textMuted mb-2">Ingresos Totales (Est.)</p>
+                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                  <CardContent className="p-6 relative">
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all"></div>
+                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Ingresos Estimados</p>
                     <h3 className="text-3xl font-bold text-primary">{totalRevenue.toFixed(2)} €</h3>
                   </CardContent>
                 </Card>
-                <Card className="bg-surfaceLayer">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-textMuted mb-2">Servicios Activos</p>
+                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                  <CardContent className="p-6 relative">
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
+                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Servicios Ofrecidos</p>
                     <h3 className="text-3xl font-bold text-white">{services?.length || 0}</h3>
                   </CardContent>
                 </Card>
-                <Card className="bg-surfaceLayer">
-                  <CardContent className="p-6">
-                    <p className="text-sm font-medium text-textMuted mb-2">Profesionales</p>
+                <Card className="bg-surfaceLayer border-none shadow-xl overflow-hidden group">
+                  <CardContent className="p-6 relative">
+                    <div className="absolute -right-4 -top-4 w-16 h-16 bg-white/5 rounded-full blur-2xl group-hover:bg-white/10 transition-all"></div>
+                    <p className="text-xs font-bold text-textMuted uppercase tracking-wider mb-2">Staff Activo</p>
                     <h3 className="text-3xl font-bold text-white">{barbers?.length || 0}</h3>
                   </CardContent>
                 </Card>
@@ -70,36 +149,52 @@ export default function AdminDashboard() {
 
               <div className="grid grid-cols-1 gap-8">
                 
-                {/* AGENDA HOY */}
-                <Card className="flex flex-col">
-                  <CardHeader>
-                    <CardTitle className="text-xl">Agenda de Hoy</CardTitle>
+                {/* AGENDA PERIODICA */}
+                <Card className="flex flex-col border-border/40 shadow-2xl">
+                  <CardHeader className="border-b border-border/30 pb-4">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <span className="w-2 h-2 bg-primary rounded-full"></span>
+                        Agenda: {rangeLabel}
+                      </CardTitle>
+                      <Button variant="outline" size="sm" onClick={() => window.location.href='/admin/agenda'}>
+                        Ver Agenda Completa
+                      </Button>
+                    </div>
                   </CardHeader>
-                  <CardContent className="flex-1">
-                    {todayAppointments.length > 0 ? (
+                  <CardContent className="flex-1 pt-6">
+                    {rangeAppointments.length > 0 ? (
                       <div className="space-y-3">
-                        {todayAppointments.map((appt: Appointment) => (
-                          <div key={appt.id} className="flex items-center justify-between p-4 bg-surface rounded-lg border border-border/50">
+                        {[...rangeAppointments].sort((a,b) => a.start_datetime.localeCompare(b.start_datetime)).map((appt: Appointment) => (
+                          <div key={appt.id} className="flex items-center justify-between p-4 bg-surface Layer/20 rounded-xl border border-border/30 hover:border-primary/30 transition-all group">
                             <div className="flex gap-4 items-center">
-                              <div className="text-center font-bold text-primary border-r border-border pr-4">
-                                {format(parseISO(appt.start_datetime), "HH:mm")}
+                              <div className="text-center min-w-[70px]">
+                                <p className="font-bold text-primary">{format(parseISO(appt.start_datetime), "HH:mm")}</p>
+                                {!isSingleDay && <p className="text-[10px] text-textMuted uppercase">{format(parseISO(appt.start_datetime), "d MMM")}</p>}
                               </div>
+                              <div className="h-10 w-[1px] bg-border/50"></div>
                               <div>
-                                <p className="font-medium text-white">{appt.client_name}</p>
-                                <p className="text-sm text-textMuted">{appt.service_name} • <span className="text-primary">{appt.barber_name}</span></p>
+                                <p className="font-bold text-white group-hover:text-primary transition-colors">{appt.client_name}</p>
+                                <p className="text-xs text-textMuted">{appt.service_name} • <span className="text-primary/80 font-medium">{appt.barber_name}</span></p>
                               </div>
                             </div>
-                            <div>
-                               <span className="px-2 py-1 bg-surfaceLayer text-xs rounded-md text-textMuted capitalize">
+                            <div className="flex flex-col items-end gap-1">
+                               <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                 appt.status === 'completada' ? 'bg-green-500/10 text-green-500' :
+                                 appt.status === 'cancelada' ? 'bg-red-500/10 text-red-500' :
+                                 'bg-blue-500/10 text-blue-400'
+                               }`}>
                                  {appt.status}
                                </span>
+                               <p className="text-xs font-bold text-white">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
                             </div>
                           </div>
                         ))}
                       </div>
                     ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-textMuted min-h-[200px] border-2 border-dashed border-border rounded-xl">
-                        <p>No hay citas programadas para hoy.</p>
+                      <div className="h-full flex flex-col items-center justify-center text-textMuted py-20 border-2 border-dashed border-border/30 rounded-3xl bg-surface/10">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="mb-4 opacity-20"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        <p className="text-lg">No hay citas registradas para este periodo.</p>
                       </div>
                     )}
                   </CardContent>

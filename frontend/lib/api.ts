@@ -1,5 +1,5 @@
 import { useAuth } from '@/store/useAuth';
-import { LoginCredentials, RegisterData, Service, User } from '@/types';
+import { LoginCredentials, RegisterData, Service, User, Appointment } from '@/types';
 
 export const API_URL = 'http://localhost:8000/api/v1';
 
@@ -219,7 +219,7 @@ export const deleteBarber = async (id: number) => {
   return true;
 };
 
-export const fetchAppointments = async () => {
+export const fetchAppointments = async (): Promise<Appointment[]> => {
   const res = await apiFetch('/appointments/');
   if (!res.ok) throw new Error('Failed to fetch appointments');
   const data = await res.json();
