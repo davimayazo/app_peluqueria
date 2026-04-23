@@ -350,3 +350,12 @@ export const updateBusinessConfig = async (configData: any) => {
   }
   return res.json();
 };
+
+export const buyProduct = async (id: number): Promise<any> => {
+  const res = await apiFetch(`/products/${id}/buy/`, { method: 'POST' });
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || 'No se pudo realizar la compra');
+  }
+  return await res.json();
+};

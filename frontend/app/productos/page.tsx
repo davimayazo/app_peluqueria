@@ -1,12 +1,17 @@
 "use client";
+import Link from 'next/link';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { fetchProducts, fetchProfile, fetchBusinessConfig } from '@/lib/api';
+import { fetchProducts, fetchProfile, fetchBusinessConfig, buyProduct } from '@/lib/api';
+import { useState } from 'react';
 
 export default function ProductosCatalogPage() {
+  const queryClient = useQueryClient();
+  const [purchaseMessage, setPurchaseMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+
   const { data: products, isLoading: productsLoading } = useQuery({
     queryKey: ['products'],
     queryFn: fetchProducts
@@ -22,6 +27,20 @@ export default function ProductosCatalogPage() {
     queryFn: fetchBusinessConfig
   });
 
+  const buyMutation = useMutation({
+    mutationFn: buyProduct,
+    onSuccess: (data) => {
+      setPurchaseMessage({ text: '¡Gracias por tu compra! El pedido ha sido procesado.', type: 'success' });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      setTimeout(() => setPurchaseMessage(null), 5000);
+    },
+    onError: (error: any) => {
+      setPurchaseMessage({ text: error.message || 'Error al procesar la compra', type: 'error' });
+      setTimeout(() => setPurchaseMessage(null), 5000);
+    }
+  });
+
   const userPoints = profile?.profile?.points || 0;
   const redemptionValue = config?.point_redemption_value || 0.01;
 
@@ -34,10 +53,18 @@ export default function ProductosCatalogPage() {
       <Navbar />
       
       <main className="max-w-7xl mx-auto px-4 py-12">
-        <header className="mb-12">
+        <header className="mb-12 relative">
           <h1 className="text-4xl font-display font-bold text-white mb-4">Nuestra Tienda</h1>
           <p className="text-xl text-textMuted">Productos premium para el cuidado de tu estilo</p>
           
+          {purchaseMessage && (
+            <div className={`fixed top-24 right-8 z-50 p-4 rounded-xl border animate-in slide-in-from-right duration-300 ${
+              purchaseMessage.type === 'success' ? 'bg-green-500/10 border-green-500/50 text-green-400' : 'bg-red-500/10 border-red-500/50 text-red-400'
+            }`}>
+              {purchaseMessage.text}
+            </div>
+          )}
+
           {profile && (
             <div className="mt-8 p-6 bg-gradient-to-r from-primary/20 to-transparent border-l-4 border-primary rounded-r-2xl inline-flex items-center gap-6">
               <div>
@@ -80,23 +107,39 @@ export default function ProductosCatalogPage() {
                     <p className="text-sm text-textMuted mb-6 line-clamp-3">{product.description || 'Producto de alta calidad seleccionado por nuestros expertos.'}</p>
                     
                     <div className="mt-auto pt-6 border-t border-border/20">
-                      {userPoints > 0 ? (
-                        <div className="space-y-3">
+                      <div className="space-y-3">
+                        {userPoints > 0 && (
                           <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                            <span className="text-textMuted">Con tus puntos:</span>
+                            <span className="text-textMuted">Descuento por puntos:</span>
                             <span className="text-primary">-{calculateDiscount(userPoints)} €</span>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-2xl font-display font-bold text-white">{finalPrice} €</span>
-                            <Button size="sm">Canjear</Button>
-                          </div>
-                        </div>
-                      ) : (
+                        )}
+                        
                         <div className="flex justify-between items-center">
-                          <span className="text-2xl font-display font-bold text-white">{product.price} €</span>
-                          <Button size="sm" variant="glass" disabled>Sin Puntos</Button>
+                          <div className="flex flex-col">
+                            {userPoints > 0 && (
+                              <span className="text-xs text-textMuted line-through">{product.price} €</span>
+                            )}
+                            <span className="text-2xl font-display font-bold text-white">
+                              {userPoints > 0 ? finalPrice : product.price} €
+                            </span>
+                          </div>
+                          
+                          {profile ? (
+                            <Button 
+                              size="sm" 
+                              onClick={() => buyMutation.mutate(product.id)}
+                              disabled={buyMutation.isPending || product.stock <= 0}
+                            >
+                              {buyMutation.isPending ? 'Procesando...' : (product.stock > 0 ? 'Comprar' : 'Agotado')}
+                            </Button>
+                          ) : (
+                            <Link href="/login?redirect=/productos">
+                              <Button size="sm" variant="glass">Login para Comprar</Button>
+                            </Link>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
