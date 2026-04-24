@@ -258,7 +258,10 @@ export const registerUser = async (userData: RegisterData) => {
   });
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.username ? 'El usuario ya existe' : 'Error al registrar usuario');
+    // Extraer el primer error que encontremos para mostrarlo al usuario
+    const firstError = Object.values(errorData)[0];
+    const message = Array.isArray(firstError) ? firstError[0] : (typeof firstError === 'string' ? firstError : 'Error al registrar usuario');
+    throw new Error(message);
   }
   return res.json();
 };

@@ -70,6 +70,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             'username', 'email', 'first_name', 'last_name',
             'password', 'password_confirm',
         ]
+        extra_kwargs = {
+            'username': {'required': False},
+        }
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -99,14 +102,35 @@ class RegisterSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        phone = validated_data.pop('phone', '')
+        email = validated_data.get('email', '')
+        username = validated_data.get('username')
+        
+        if not username and email:
+            # Generar username a partir del email
+            username = email.split('@')[0]
+            # Asegurar unicidad
+            if User.objects.filter(username=username).exists():
+                username = f"{username}_{User.objects.count()}"
+        elif not username:
+            # Fallback extremo si no hay ni email (no debería pasar por el validador)
+            username = f"user_{User.objects.count()}"
+
         user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data.get('email', ''),
+            username=username,
+            email=email,
             first_name=validated_data.get('first_name', ''),
             last_name=validated_data.get('last_name', ''),
             password=validated_data['password'],
         )
+        
+        # El teléfono se puede pasar en el context o validated_data si se añade a Meta fields
+        # Como lo añadimos en el frontend pero no estaba en el modelo User, 
+        # asumimos que viene en el request data
+        request = self.context.get('request')
+        phone = ''
+        if request and 'phone' in request.data:
+            phone = request.data['phone']
+            
         Profile.objects.create(user=user, role='cliente', phone=phone)
         return user
 

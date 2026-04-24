@@ -23,10 +23,10 @@ function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParams = searchParams.get('redirect');
-  
+
   const { login } = useAuth();
   const [error, setError] = useState('');
-  
+
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
   });
@@ -36,16 +36,16 @@ function LoginForm() {
     try {
       // 1. Authenticate and get tokens
       const tokenData = await loginUser(data);
-      
+
       // Temporarily store in zustand without user data to allow fetchProfile to work
       useAuth.getState().login(tokenData.access, tokenData.refresh, null as any);
-      
+
       // 2. Fetch user profile data
       const userData = await fetchProfile();
-      
+
       // 3. Finalize login store
       login(tokenData.access, tokenData.refresh, userData);
-      
+
       // 4. Redirect
       if (redirectParams) {
         router.push(redirectParams);
@@ -54,7 +54,7 @@ function LoginForm() {
       } else {
         router.push('/cliente/dashboard');
       }
-      
+
     } catch (err: any) {
       // Revert temporary state if failed
       useAuth.getState().logout();
@@ -68,7 +68,7 @@ function LoginForm() {
         <CardTitle className="text-3xl">Bienvenido</CardTitle>
         <CardDescription>Inicia sesión para gestionar tus citas.</CardDescription>
       </CardHeader>
-      
+
       <CardContent>
         {error && (
           <div className="mb-4 bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-2 rounded-md text-sm text-center">
@@ -78,30 +78,30 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-textMuted">Correo o Usuario</label>
-            <Input 
+            <label className="text-sm font-medium text-textMuted">Correo</label>
+            <Input
               type="text"
               {...register('username')}
-              placeholder="ejemplo@correo.com o admin" 
+              placeholder="ejemplo@correo.com"
               className={errors.username ? "border-red-500" : ""}
             />
             {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-textMuted">Contraseña</label>
-            <Input 
-              type="password" 
+            <Input
+              type="password"
               {...register('password')}
-              placeholder="••••••••" 
+              placeholder="••••••••"
               className={errors.password ? "border-red-500" : ""}
             />
             {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
           </div>
-          
+
           <div className="pt-4">
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isSubmitting}
               className="w-full shadow-glow"
             >
@@ -110,10 +110,10 @@ function LoginForm() {
           </div>
         </form>
       </CardContent>
-      
+
       <CardFooter className="justify-center">
         <div className="text-sm text-textMuted">
-            ¿No tienes cuenta? <Link href="/registro" className="text-primary hover:text-primaryHover hover:underline transition-colors">Regístrate aquí</Link>
+          ¿No tienes cuenta? <Link href="/registro" className="text-primary hover:text-primaryHover hover:underline transition-colors">Regístrate aquí</Link>
         </div>
       </CardFooter>
     </Card>
@@ -125,7 +125,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-background z-0" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full z-0 pointer-events-none" />
-      
+
       <Suspense fallback={<div className="z-10 text-white">Cargando...</div>}>
         <LoginForm />
       </Suspense>

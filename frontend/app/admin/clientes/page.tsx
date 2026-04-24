@@ -17,11 +17,11 @@ export default function AdminClientes() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [historyClient, setHistoryClient] = useState<User | null>(null);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [formData, setFormData] = useState({
-    username: '',
     email: '',
     password: '',
+    password_confirm: '',
     first_name: '',
     last_name: '',
     phone: '',
@@ -29,9 +29,9 @@ export default function AdminClientes() {
   });
 
   // Queries
-  const { data: users, isLoading } = useQuery({ 
-    queryKey: ['admin_users'], 
-    queryFn: fetchUsers 
+  const { data: users, isLoading } = useQuery({
+    queryKey: ['admin_users'],
+    queryFn: fetchUsers
   });
 
   const { data: allAppointments } = useQuery({
@@ -68,7 +68,7 @@ export default function AdminClientes() {
   const clients = users?.filter((u: User) => {
     const isClient = u.profile?.role === 'cliente';
     const searchLower = searchTerm.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       u.full_name?.toLowerCase().includes(searchLower) ||
       u.username.toLowerCase().includes(searchLower) ||
       u.email.toLowerCase().includes(searchLower) ||
@@ -84,9 +84,9 @@ export default function AdminClientes() {
     if (user) {
       setSelectedUser(user);
       setFormData({
-        username: user.username,
         email: user.email,
         password: '',
+        password_confirm: '',
         first_name: user.first_name,
         last_name: user.last_name,
         phone: user.profile?.phone || '',
@@ -95,9 +95,9 @@ export default function AdminClientes() {
     } else {
       setSelectedUser(null);
       setFormData({
-        username: '',
         email: '',
         password: '',
+        password_confirm: '',
         first_name: '',
         last_name: '',
         phone: '',
@@ -120,7 +120,7 @@ export default function AdminClientes() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedUser) {
-      const { password, phone, points, ...userData } = formData;
+      const { password, password_confirm, phone, points, ...userData } = formData;
       const updateData = {
         ...userData,
         profile: {
@@ -130,7 +130,11 @@ export default function AdminClientes() {
       };
       updateMutation.mutate({ id: selectedUser.id, data: updateData });
     } else {
-      createMutation.mutate({ ...formData, password2: formData.password });
+      if (formData.password !== formData.password_confirm) {
+        setError("Las contraseñas no coinciden.");
+        return;
+      }
+      createMutation.mutate(formData);
     }
   };
 
@@ -144,14 +148,14 @@ export default function AdminClientes() {
     <ProtectedRoute allowedRoles={['admin', 'barbero']}>
       <div className="min-h-screen bg-background text-textMain flex flex-col">
         <Navbar />
-        
+
         <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
           <div className="mb-8 border-b border-border pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <h1 className="text-3xl font-display font-bold text-primary mb-2">Gestión de Clientes</h1>
               <p className="text-textMuted">Base de datos de clientes registrados</p>
             </div>
-            <button 
+            <button
               onClick={() => openModal()}
               className="px-4 py-2 bg-primary text-black font-semibold rounded-lg hover:bg-primary/90 transition-colors"
             >
@@ -204,21 +208,21 @@ export default function AdminClientes() {
                             <td className="p-4 text-textMuted">{user.email}</td>
                             <td className="p-4 font-bold text-primary">{user.profile?.points || 0}</td>
                             <td className="p-4 text-right flex justify-end gap-2">
-                              <button 
+                              <button
                                 onClick={() => openHistoryModal(user)}
                                 className="p-2 text-primary/70 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                                 title="Ver Historial"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                               </button>
-                              <button 
+                              <button
                                 onClick={() => openModal(user)}
                                 className="p-2 text-textMuted hover:text-white hover:bg-surface rounded-lg transition-colors"
                                 title="Editar"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                               </button>
-                              <button 
+                              <button
                                 onClick={() => handleDelete(user)}
                                 className="p-2 text-red-500/50 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
                                 title="Eliminar"
@@ -275,12 +279,11 @@ export default function AdminClientes() {
                           <p className="text-sm text-textMuted">Barbero: <span className="text-white font-medium">{appt.barber_name}</span></p>
                           <p className="text-primary font-bold">{parseFloat(appt.price_at_booking).toFixed(2)} €</p>
                         </div>
-                        <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-widest ${
-                          appt.status === 'completada' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
-                          appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
-                          appt.status === 'cancelada' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                          'bg-blue-500/10 text-blue-400 border border-blue-500/20'
-                        }`}>
+                        <span className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase tracking-widest ${appt.status === 'completada' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                            appt.status === 'pendiente' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
+                              appt.status === 'cancelada' ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
+                                'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}>
                           {appt.status}
                         </span>
                       </div>
@@ -308,35 +311,37 @@ export default function AdminClientes() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Nombre</label>
-                    <input type="text" required value={formData.first_name} onChange={(e) => setFormData({...formData, first_name: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <input type="text" required value={formData.first_name} onChange={(e) => setFormData({ ...formData, first_name: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Apellidos</label>
-                    <input type="text" required value={formData.last_name} onChange={(e) => setFormData({...formData, last_name: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <input type="text" required value={formData.last_name} onChange={(e) => setFormData({ ...formData, last_name: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-textMuted mb-1">Nombre de Usuario</label>
-                  <input type="text" required disabled={!!selectedUser} value={formData.username} onChange={(e) => setFormData({...formData, username: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50" />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-textMuted mb-1">Email</label>
-                  <input type="email" required value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  <input type="email" required value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1">Teléfono</label>
-                    <input type="text" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <input type="text" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-textMuted mb-1 font-bold text-primary italic">Puntos de Fidelización</label>
-                    <input type="number" value={formData.points} onChange={(e) => setFormData({...formData, points: parseInt(e.target.value) || 0})} className="w-full bg-background border border-primary/30 rounded-lg px-4 py-2 text-primary font-bold focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    <input type="number" value={formData.points} onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })} className="w-full bg-background border border-primary/30 rounded-lg px-4 py-2 text-primary font-bold focus:outline-none focus:ring-2 focus:ring-primary/50" />
                   </div>
                 </div>
                 {!selectedUser && (
-                  <div>
-                    <label className="block text-sm font-medium text-textMuted mb-1">Contraseña</label>
-                    <input type="password" required value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-textMuted mb-1">Contraseña</label>
+                      <input type="password" required value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-textMuted mb-1">Confirmar Contraseña</label>
+                      <input type="password" required value={formData.password_confirm} onChange={(e) => setFormData({ ...formData, password_confirm: e.target.value })} className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                    </div>
                   </div>
                 )}
                 <div className="flex gap-3 mt-8">

@@ -14,7 +14,6 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 const registerSchema = z.object({
   first_name: z.string().min(2, 'El nombre es obligatorio'),
   last_name: z.string().min(2, 'Los apellidos son obligatorios'),
-  username: z.string().min(3, 'El usuario debe tener al menos 3 caracteres'),
   email: z.string().email('Dirección de correo inválida'),
   phone: z.string().optional(),
   password: z.string()
@@ -42,7 +41,7 @@ export default function RegisterPage() {
     setError('');
     try {
       const { password_confirm, ...registerData } = data;
-      await registerUser({ ...registerData, password2: data.password });
+      await registerUser({ ...registerData, password_confirm: data.password });
       router.push('/login?registered=true');
     } catch (err: any) {
       setError(err.message || 'Error al completar el registro');
@@ -87,16 +86,6 @@ export default function RegisterPage() {
                 />
                 {errors.last_name && <p className="text-xs text-red-500">{errors.last_name.message}</p>}
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-textMuted">Usuario</label>
-              <Input 
-                {...register('username')}
-                placeholder="juanpy88" 
-                className={errors.username ? "border-red-500" : ""}
-              />
-              {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}
             </div>
 
             <div className="space-y-2">
