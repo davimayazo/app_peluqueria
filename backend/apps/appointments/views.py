@@ -23,7 +23,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if hasattr(user, 'profile') and user.profile.role == 'admin':
+        if hasattr(user, 'profile') and user.profile.role in ['admin', 'barbero']:
             return Appointment.objects.all().order_by('-start_datetime')
         return Appointment.objects.filter(client=user).order_by('-start_datetime')
 
@@ -55,9 +55,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         now = timezone.now()
         
         # Regla: RF-13 (Antelación mínima configurable)
-        is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'admin'
+        is_staff = hasattr(request.user, 'profile') and request.user.profile.role in ['admin', 'barbero']
         
-        if not is_admin:
+        if not is_staff:
             from apps.users.models import BusinessConfig
             config, _ = BusinessConfig.objects.get_or_create(id=1)
             min_notice = config.min_booking_notice_minutes
@@ -82,7 +82,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             status__in=['pendiente', 'confirmada']
         ).count()
         
-        if future_appointments >= 3 and getattr(request.user, 'profile', None) and request.user.profile.role != 'admin':
+        if future_appointments >= 3 and getattr(request.user, 'profile', None) and request.user.profile.role not in ['admin', 'barbero']:
             return Response(
                 {"error": "Has alcanzado el límite de citas futuras (3)."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -94,7 +94,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 # Determinar el cliente (el admin puede especificar uno)
                 client = request.user
                 
-                if is_admin and serializer.validated_data.get('client_id'):
+                if is_staff and serializer.validated_data.get('client_id'):
                     from django.contrib.auth.models import User
                     try:
                         client = User.objects.get(id=serializer.validated_data['client_id'])
@@ -165,10 +165,10 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if appointment.status in ['cancelada', 'completada']:
             return Response({"error": "La cita ya está completada o cancelada."}, status=status.HTTP_400_BAD_REQUEST)
             
-        is_admin = hasattr(request.user, 'profile') and request.user.profile.role == 'admin'
+        is_staff = hasattr(request.user, 'profile') and request.user.profile.role in ['admin', 'barbero']
         
         # Validar 24h si el usuario es cliente
-        if not is_admin:
+        if not is_staff:
             if appointment.start_datetime <= timezone.now() + timedelta(hours=24):
                 return Response(
                     {"error": "No es posible cancelar con menos de 24h de antelación. Contacta con nosotros."},
@@ -176,7 +176,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 )
         
         appointment.status = 'cancelada'
-        appointment.cancelled_by = 'admin' if is_admin else 'client'
+        appointment.cancelled_by = 'admin' if is_staff else 'client'
         appointment.cancellation_reason = request.data.get('reason', '')
         appointment.save()
         
@@ -184,10 +184,8 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'], permission_classes=[permissions.IsAuthenticated])
     def complete(self, request, pk=None):
-        """RF-20: Marcar cita como completada (solo admin)."""
-        # Nota: Idealmente deberíamos usar IsAdmin (custom permission) aquí, 
-        # asumiendo IsAdminUser es personal, usamos la comprobación normal.
-        if getattr(request.user, 'profile', None) and getattr(request.user.profile, 'role') != 'admin':
+        """RF-20: Marcar cita como completada (solo admin/barbero)."""
+        if getattr(request.user, 'profile', None) and getattr(request.user.profile, 'role') not in ['admin', 'barbero']:
              return Response(status=status.HTTP_403_FORBIDDEN)
              
         appointment = self.get_object()

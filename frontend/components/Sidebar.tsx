@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 
 export default function Sidebar() {
-  const { logout } = useAuth();
+  const { logout, hasRole } = useAuth();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -39,9 +39,11 @@ export default function Sidebar() {
         <Link href="/admin/productos" className="flex items-center px-4 py-3 text-gray-300 hover:bg-barber-dark hover:text-white rounded-lg transition-colors group">
           <span className="font-medium group-hover:translate-x-1 transition-transform text-primary">Productos (Inventario)</span>
         </Link>
-        <Link href="/admin/configuracion" className="flex items-center px-4 py-3 text-gray-300 hover:bg-barber-dark hover:text-white rounded-lg transition-colors group">
-          <span className="font-medium group-hover:translate-x-1 transition-transform">Configuración</span>
-        </Link>
+        {hasRole('admin') && (
+          <Link href="/admin/configuracion" className="flex items-center px-4 py-3 text-gray-300 hover:bg-barber-dark hover:text-white rounded-lg transition-colors group">
+            <span className="font-medium group-hover:translate-x-1 transition-transform">Configuración</span>
+          </Link>
+        )}
       </nav>
       <div className="p-4 border-t border-gray-800">
         <button 

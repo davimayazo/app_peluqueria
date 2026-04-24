@@ -46,7 +46,7 @@ export default function AdminProductosPage() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['admin', 'barbero']}>
       <div className="min-h-screen bg-background text-textMain flex flex-col">
         <Navbar />
         

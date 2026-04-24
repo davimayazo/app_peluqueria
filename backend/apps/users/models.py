@@ -10,6 +10,7 @@ class Profile(models.Model):
     ROLE_CHOICES = (
         ('cliente', 'Cliente'),
         ('admin', 'Administrador'),
+        ('barbero', 'Barbero'),
     )
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')

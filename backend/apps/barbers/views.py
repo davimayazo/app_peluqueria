@@ -7,19 +7,19 @@ from .models import Barber, BarberSchedule
 from apps.services.models import Service
 from apps.appointments.models import Appointment
 from .serializers import BarberSerializer, BarberCreateSerializer
-from apps.users.permissions import IsAdminOrReadOnly
+from apps.users.permissions import IsAdminOrReadOnly, IsStaffOrReadOnly
 
 
 class BarberViewSet(viewsets.ModelViewSet):
     """
     RF-08 / RF-11: Gestión de Barberos y disponibilidad.
     - Clientes ven la lista y las disponibilidades.
-    - Admin gestiona los perfiles y horarios completos.
+    - Staff (Admin/Barbero) gestiona los perfiles y horarios completos.
     """
     queryset = Barber.objects.all()
     filter_backends = [filters.SearchFilter]
     search_fields = ['full_name', 'specialties']
-    permission_classes = [IsAdminOrReadOnly]
+    permission_classes = [IsStaffOrReadOnly]
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -28,7 +28,7 @@ class BarberViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated and hasattr(user, 'profile') and user.profile.role == 'admin':
+        if user.is_authenticated and hasattr(user, 'profile') and user.profile.role in ['admin', 'barbero']:
             return Barber.objects.all()
         return Barber.objects.filter(is_active=True)
 

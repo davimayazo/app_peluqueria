@@ -1,14 +1,19 @@
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .models import Product, ProductSale
 from .serializers import ProductSerializer, ProductSaleSerializer
 from apps.users.models import BusinessConfig
+from apps.users.permissions import IsStaff, IsStaffOrReadOnly
 
 class ProductListView(generics.ListCreateAPIView):
     serializer_class = ProductSerializer
+    
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
+        return [IsStaff()]
     
     def get_queryset(self):
         # Auto-create table hack for SQLite environment
@@ -53,12 +58,13 @@ class ProductListView(generics.ListCreateAPIView):
 class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaff]
 
 class BuyProductView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, pk):
+        # ... (código existente igual)
         product = get_object_or_404(Product, pk=pk)
         profile = request.user.profile
         
@@ -104,4 +110,4 @@ class BuyProductView(APIView):
 class ProductSaleListView(generics.ListAPIView):
     queryset = ProductSale.objects.all()
     serializer_class = ProductSaleSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsStaff]

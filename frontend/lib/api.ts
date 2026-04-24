@@ -181,7 +181,11 @@ export const createBarber = async (barberData: any) => {
     method: 'POST',
     body: JSON.stringify(barberData),
   });
-  if (!res.ok) throw new Error('Error al crear el barbero');
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const message = errorData.detail || errorData.error || JSON.stringify(errorData) || 'Error al crear el barbero';
+    throw new Error(message);
+  }
   return res.json();
 };
 

@@ -35,7 +35,7 @@ export default function Navbar() {
             </Link>
           </div>
           <div className="flex items-center space-x-6 ml-8">
-            {!hasRole('admin') && (
+            {!(hasRole('admin') || hasRole('barbero')) && (
               <Link href="/productos" className="text-textMuted hover:text-white text-sm font-medium transition-colors">Productos</Link>
             )}
           </div>
@@ -52,7 +52,7 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
-                  {hasRole('admin') ? (
+                  {(hasRole('admin') || hasRole('barbero')) ? (
                     <Link href="/admin/dashboard" className="text-textMuted hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Panel Admin</Link>
                   ) : (
                     <>

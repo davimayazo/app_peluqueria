@@ -59,19 +59,21 @@ class LogoutView(APIView):
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+from .permissions import IsAdmin, IsStaff
+
 class BusinessConfigView(generics.RetrieveUpdateAPIView):
     """
-    RF-24: Configuración general del negocio.
+    RF-24: Configuración general del negocio. Solo Admin.
     """
     serializer_class = BusinessConfigSerializer
-    permission_classes = [permissions.AllowAny]
-
+    
     def get_permissions(self):
         if self.request.method in ['PATCH', 'PUT']:
-            return [permissions.IsAuthenticated()]
+            return [IsAdmin()]
         return [permissions.AllowAny()]
 
     def get_object(self):
+        # ... (código existente igual)
         global _migrations_checked
         if not _migrations_checked:
             from django.db import connection
@@ -109,6 +111,7 @@ class BusinessConfigView(generics.RetrieveUpdateAPIView):
         return obj
 
     def patch(self, request, *args, **kwargs):
+        # ... (código existente igual)
         print("DEBUG: Recibiendo configuración:", request.data)
         try:
             return super().patch(request, *args, **kwargs)
@@ -122,16 +125,16 @@ class BusinessConfigView(generics.RetrieveUpdateAPIView):
 
 class UsersListView(generics.ListAPIView):
     """
-    RF-23: Lista de usuarios (sólo para administradores).
+    RF-23: Lista de usuarios (para staff: admin y barberos).
     """
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    permission_classes = [permissions.IsAuthenticated] 
+    permission_classes = [IsStaff] 
 
 class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
-    Permite al admin gestionar un usuario específico.
+    Permite al staff gestionar un usuario específico.
     """
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    permission_classes = [permissions.IsAuthenticated] # TODO: Add IsAdmin
+    permission_classes = [IsStaff]

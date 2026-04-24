@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/Card';
 
 const loginSchema = z.object({
-  username: z.string().min(1, 'El usuario es requerido'),
+  username: z.string().min(1, 'El correo o usuario es requerido'),
   password: z.string().min(1, 'La contraseña es requerida'),
 });
 
@@ -49,7 +49,7 @@ function LoginForm() {
       // 4. Redirect
       if (redirectParams) {
         router.push(redirectParams);
-      } else if (userData.profile?.role === 'admin') {
+      } else if (userData.profile?.role === 'admin' || userData.profile?.role === 'barbero') {
         router.push('/admin/dashboard');
       } else {
         router.push('/cliente/dashboard');
@@ -78,10 +78,11 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-textMuted">Usuario</label>
+            <label className="text-sm font-medium text-textMuted">Correo o Usuario</label>
             <Input 
+              type="text"
               {...register('username')}
-              placeholder="Introduzca su usuario" 
+              placeholder="ejemplo@correo.com o admin" 
               className={errors.username ? "border-red-500" : ""}
             />
             {errors.username && <p className="text-xs text-red-500">{errors.username.message}</p>}

@@ -34,7 +34,9 @@ export default function AdminBarberos() {
     bio: '',
     specialties: '',
     avatar_url: '',
-    is_active: true
+    is_active: true,
+    email: '',
+    password: ''
   });
 
   // Schedule State
@@ -92,7 +94,9 @@ export default function AdminBarberos() {
         bio: barber.bio || '',
         specialties: barber.specialties.join(', '),
         avatar_url: barber.avatar_url || '',
-        is_active: barber.is_active
+        is_active: barber.is_active,
+        email: '',
+        password: ''
       });
     } else {
       setSelectedBarber(null);
@@ -101,7 +105,9 @@ export default function AdminBarberos() {
         bio: '',
         specialties: '',
         avatar_url: '',
-        is_active: true
+        is_active: true,
+        email: '',
+        password: ''
       });
     }
     setIsModalOpen(true);
@@ -139,6 +145,11 @@ export default function AdminBarberos() {
       ...formData,
       specialties: formData.specialties.split(',').map(s => s.trim()).filter(s => s !== '')
     };
+
+    // Solo enviar email y password si tienen contenido para evitar errores de validación
+    if (!data.email) delete data.email;
+    if (!data.password) delete data.password;
+
     if (selectedBarber) {
       updateMutation.mutate({ id: selectedBarber.id, data });
     } else {
@@ -155,7 +166,7 @@ export default function AdminBarberos() {
   };
 
   return (
-    <ProtectedRoute allowedRoles={['admin']}>
+    <ProtectedRoute allowedRoles={['admin', 'barbero']}>
       <div className="min-h-screen bg-background text-textMain flex flex-col">
         <Navbar />
         
@@ -285,6 +296,26 @@ export default function AdminBarberos() {
                   <textarea value={formData.bio} onChange={(e) => setFormData({...formData, bio: e.target.value})}
                     className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 min-h-[80px]" />
                 </div>
+                
+                {!selectedBarber && (
+                  <div className="grid grid-cols-1 gap-4 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                    <p className="text-xs font-bold text-primary uppercase tracking-wider">Acceso a la Aplicación</p>
+                    <div>
+                      <label className="block text-sm font-medium text-textMuted mb-1">Email del Barbero</label>
+                      <input type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                        placeholder="ejemplo@barberia.com" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-textMuted mb-1">Contraseña Temporal</label>
+                      <input type="password" value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        className="w-full bg-background border border-border rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                        placeholder="Mínimo 8 caracteres" />
+                      <p className="text-[10px] text-textMuted mt-1">El barbero podrá cambiarla después en su perfil.</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-2 py-2">
                   <input type="checkbox" id="is_active" checked={formData.is_active} onChange={(e) => setFormData({...formData, is_active: e.target.checked})}
                     className="w-4 h-4 rounded border-border text-primary focus:ring-primary bg-background" />
